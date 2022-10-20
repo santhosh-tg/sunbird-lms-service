@@ -4,7 +4,6 @@ import org.apache.commons.lang3.StringUtils
 import org.sunbird.cloud.storage.BaseStorageService
 import org.sunbird.cloud.storage.factory.{StorageConfig, StorageServiceFactory}
 import org.sunbird.job.BaseJobConfig
-
 import java.io.File
 
 class CloudStorageUtil(config: BaseJobConfig) extends Serializable {
@@ -24,6 +23,10 @@ class CloudStorageUtil(config: BaseJobConfig) extends Serializable {
         val awsStorageKey = config.getString("aws_storage_key", "")
         val awsStorageSecret = config.getString("aws_storage_secret", "")
         storageService = StorageServiceFactory.getStorageService(StorageConfig(cloudStorageType, awsStorageKey, awsStorageSecret))
+      } else if (StringUtils.equalsIgnoreCase(cloudStorageType, "gcloud")) {
+        val storageKey = config.getString("gcloud_client_key", "")
+        val storageSecret = config.getString("gcloud_storage_secret", "")
+        storageService = StorageServiceFactory.getStorageService(StorageConfig(cloudStorageType, storageKey, storageSecret))
       } else throw new Exception("Error while initialising cloud storage: " + cloudStorageType)
     }
     storageService
@@ -33,6 +36,7 @@ class CloudStorageUtil(config: BaseJobConfig) extends Serializable {
     cloudStorageType match {
       case "azure" => config.getString("azure_storage_container", "")
       case "aws" => config.getString("aws_storage_container", "")
+      case "gcloud" => config.getString("gcloud_storage_container", "")
       case _ => throw new Exception("Container name not configured.")
     }
   }

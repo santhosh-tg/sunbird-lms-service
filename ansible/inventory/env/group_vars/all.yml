@@ -1,0 +1,24 @@
+###################### inQuiry Variables############################
+secrets_path: '{{inventory_dir}}/group_vars/common.yml'
+azure_secret: "{{ sunbird_public_storage_account_key }}"
+cloud_storage_config_environment: "{{env}}"
+ansible_vault_password: "{{lp_vault_ansible_vault_password}}"
+env_name: "{{ env }}"
+instance_name: "{{ env }}"
+instance: "{{ env }}"
+
+### Global vars
+flink_namespace: "flink-kp-{{ bb_name }}"
+default_channel: "org.sunbird"
+
+
+### base config
+zookeepers: "{{groups['processing-cluster-zookeepers']|join(':2181,')}}:2181"
+kafka_brokers: "{{groups['processing-cluster-kafka']|join(':9092,')}}:9092"
+azure_account: "{{ sunbird_public_storage_account_name }}"
+inquiry_redis_host: "{{ groups['dp-redis'][0] }}"
+inquiry_cassandra_connection_ip: "{{ groups['core-cassandra'][0] }}"
+neo4j_route_path: "bolt://{{ groups['learning-neo4j-node1'][0] }}:7687"
+search_es_host: "{{ groups['composite-search-cluster']|join(':9200,')}}:9200"
+
+

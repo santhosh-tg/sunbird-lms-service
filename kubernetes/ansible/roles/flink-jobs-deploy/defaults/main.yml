@@ -1,0 +1,82 @@
+imagepullsecrets: sunbird-registry-secret
+
+### Job manager related vars
+jobmanager_rpc_port: 6123
+jobmanager_blob_port: 6124
+jobmanager_query_port: 6125
+jobmanager_ui_port: 8081
+jobmanager_prom_port: 9250
+jobmanager_heap_memory: 1024
+jobmanager_ui_rest_port: 80
+jobmanager_ui_tcp_port: 8081
+jobmanager_ui_service:
+  type: LoadBalancer
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+### taskmanager related vars
+healthcheck: true
+taskmanager_liveness:
+  livenessProbe:
+    tcpSocket:
+      port: 6122
+    initialDelaySeconds: 30
+    periodSeconds: 60
+
+taskmanager_prom_port: 9251
+taskmanager_rpc_port: 6122
+taskmanager_heap_memory: 1024
+
+### base-config related vars
+postgres_max_connections: 2
+flink_container_name: flink-check-points-store
+checkpoint_interval: 60000
+checkpoint_pause_between_seconds: 5000
+checkpoint_compression_enabled: true
+restart_attempts: 3
+restart_delay: 30000 # in milli-seconds
+producer_max_request_size: 1572864
+
+### class name vars
+flink_job_names:
+  async-questionset-publish:
+    job_class_name: 'org.sunbird.job.questionset.task.QuestionSetPublishStreamTask'
+    replica: 1
+    jobmanager_memory: 2048m
+    taskmanager_memory: 2048m
+    taskslots: 1
+    cpu_requests: 0.3
+
+### Global vars
+cloud_store: azure
+service_monitor_enabled: true
+job_classname: ""
+
+### controlling the flink jobs log level
+flink_jobs_console_log_level: INFO
+flink_libraries_log_level: ERROR
+
+### QuestionSet Publish Config
+master_category_validation_enabled: "Yes"
+inquiry_schema_base_path: "{{ kp_schema_base_path }}"
+inquiry_assessment_publish_kafka_topic_name: "{{ env_name }}.assessment.publish.request"
+inquiry_assessment_post_publish_kafka_topic_name: "{{ env_name }}.assessment.postpublish.request"
+inquiry_assessment_publish_group: "{{ env_name }}-questionset-publish-group"
+question_keyspace_name: "{{instance}}_question_store"
+hierarchy_keyspace_name: "{{instance}}_hierarchy_store"
+
+# Azure cloud storage config
+azure_cred_storage_key: ""
+azure_cred_storage_secret: ""
+azure_storage_container_name: ""
+
+
+# AWS cloud storage config
+aws_cred_storage_key: ""
+aws_cred_storage_secret: ""
+aws_storage_container_name: ""
+
+#Google cloud storage config
+gcloud_cred_client_key: ""
+gcloud_cred_private_secret: ""
+gcloud_storage_container_name: ""
