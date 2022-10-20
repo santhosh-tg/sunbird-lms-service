@@ -1,0 +1,165 @@
+namespace: {{ flink_namespace }}
+imagepullsecrets: {{ imagepullsecrets }}
+dockerhub: {{ dockerhub }}
+repository: {{flink_repository|default('data-pipeline')}}
+image_tag: {{ image_tag }}
+azure_account: {{ azure_account }}
+azure_secret: {{ azure_secret }}
+serviceMonitor:
+  enabled: {{ service_monitor_enabled | lower}}
+
+replicaCount: {{taskmana_replicacount|default(1)}}
+
+jobmanager:
+  rpc_port: {{ jobmanager_rpc_port }}
+  blob_port: {{ jobmanager_blob_port }}
+  query_port: {{ jobmanager_query_port }}
+  ui_port: {{ jobmanager_ui_port }}
+  prom_port: {{ jobmanager_prom_port }}
+  heap_memory: {{ jobmanager_heap_memory }}
+
+service: {{ jobmanager_ui_service|to_json }}
+
+rest_port: {{ jobmanager_ui_rest_port }}
+resttcp_port: {{ jobmanager_ui_tcp_port }}
+
+taskmanager:
+  prom_port: {{ taskmanager_prom_port }}
+  rpc_port: {{ taskmanager_rpc_port }}
+  heap_memory: {{ taskmanager_heap_memory }}
+  replicas: {{taskmanager_replicacount|default(1)}}
+
+job_classname: {{ job_classname }}
+{{ taskmanager_liveness | to_nice_yaml }}
+
+log4j_console_properties: |
+  # This affects logging for both user code and Flink
+  rootLogger.level = {{ flink_jobs_console_log_level | default(INFO) }}
+  rootLogger.appenderRef.console.ref = ConsoleAppender
+
+  # Uncomment this if you want to _only_ change Flink's logging
+  #logger.flink.name = org.apache.flink
+  #logger.flink.level = {{ flink_jobs_console_log_level | default(INFO) }}
+
+  # The following lines keep the log level of common libraries/connectors on
+  # log level INFO. The root logger does not override this. You have to manually
+  # change the log levels here.
+  logger.akka.name = akka
+  logger.akka.level = {{ flink_libraries_log_level | default(INFO) }}
+  logger.kafka.name= org.apache.kafka
+  logger.kafka.level = {{ flink_libraries_log_level | default(INFO) }}
+  logger.hadoop.name = org.apache.hadoop
+  logger.hadoop.level = {{ flink_libraries_log_level | default(INFO) }}
+  logger.zookeeper.name = org.apache.zookeeper
+  logger.zookeeper.level = {{ flink_libraries_log_level | default(INFO) }}
+
+  # Log all infos to the console
+  appender.console.name = ConsoleAppender
+  appender.console.type = CONSOLE
+  appender.console.layout.type = PatternLayout
+  appender.console.layout.pattern = %d{yyyy-MM-dd HH:mm:ss,SSS} %-5p %-60c %x - %m%n
+
+  # Suppress the irrelevant (wrong) warnings from the Netty channel handler
+  logger.netty.name = org.apache.flink.shaded.akka.org.jboss.netty.channel.DefaultChannelPipeline
+  logger.netty.level = OFF
+
+base_config: |
+  kafka {
+      broker-servers = "{{ kafka_brokers }}"
+      zookeeper = "{{ zookeepers }}"
+      producer {
+        max-request-size = {{ producer_max_request_size }}
+      }
+    }
+    job {
+      env = "{{ env_name }}"
+      enable.distributed.checkpointing = true
+      statebackend {
+        blob {
+          storage {
+            account = "{{ azure_account }}.blob.core.windows.net"
+            container = "{{ flink_container_name }}"
+            checkpointing.dir = "checkpoint"
+          }
+        }
+        base.url = "wasbs://"${job.statebackend.blob.storage.container}"@"${job.statebackend.blob.storage.account}"/"${job.statebackend.blob.storage.checkpointing.dir}
+      }
+    }
+    task {
+      parallelism = 1
+      consumer.parallelism = 1
+      checkpointing.compressed = {{ checkpoint_compression_enabled|lower }}
+      checkpointing.interval = {{ checkpoint_interval }}
+      checkpointing.pause.between.seconds = {{ checkpoint_pause_between_seconds }}
+      restart-strategy.attempts = {{ restart_attempts }}
+      restart-strategy.delay = {{ restart_delay }} # in milli-seconds
+    }
+    redis {
+      host = {{ inquiry_redis_host }}
+      port = 6379
+    }
+    lms-cassandra {
+      host = "{{ inquiry_cassandra_connection_ip }}"
+      port = "9042"
+    }
+    neo4j {
+      routePath = "{{ neo4j_route_path }}"
+      graph = "domain"
+    }
+    es {
+        basePath = "{{ search_es_host }}"
+    }
+    schema {
+      basePath = "{{ inquiry_schema_base_path }}"
+      supportedVersion = {
+        itemset = "2.0"
+      }
+    }
+async-questionset-publish:
+  async-questionset-publish: |+
+    include file("/data/flink/conf/base-config.conf")
+    kafka {
+      input.topic = "{{ inquiry_assessment_publish_kafka_topic_name }}"
+      post_publish.topic = "{{ inquiry_assessment_post_publish_kafka_topic_name }}"
+      groupId = "{{ inquiry_assessment_publish_group }}"
+    }
+    task {
+      consumer.parallelism = 1
+      parallelism = 1
+      router.parallelism = 1
+    }
+    question {
+      keyspace = "{{ question_keyspace_name }}"
+      table = "question_data"
+    }
+    questionset {
+      keyspace = "{{ hierarchy_keyspace_name }}"
+      table = "questionset_hierarchy"
+    }
+    print_service.base_url = "{{ kp_print_service_base_url }}"
+    cloud_storage_type="{{ cloud_store }}"
+
+    #Azure Cloud Storage Config
+    azure_storage_key="{{ azure_cred_storage_key }}"
+    azure_storage_secret="{{ azure_cred_storage_secret }}"
+    azure_storage_container="{{ azure_storage_container_name }}"
+
+    #AWS Cloud Storage Config
+    aws_storage_key= "{{ aws_cred_storage_key }}"
+    aws_storage_secret= "{{ aws_cred_storage_secret }}"
+    aws_storage_container= "{{ aws_storage_container_name }}"
+
+    #Google Cloud Storage Config
+    gcloud_client_key= "{{ gcloud_cred_client_key }}"
+    gcloud_storage_secret= "{{ gcloud_cred_private_secret }}"
+    gcloud_storage_container= "{{ gcloud_storage_container_name }}"
+
+    master.category.validation.enabled ="{{ master_category_validation_enabled }}"
+
+  flink-conf: |+
+    jobmanager.memory.flink.size: {{ flink_job_names['async-questionset-publish'].jobmanager_memory }}
+    taskmanager.memory.flink.size: {{ flink_job_names['async-questionset-publish'].taskmanager_memory }}
+    taskmanager.numberOfTaskSlots: {{ flink_job_names['async-questionset-publish'].taskslots }}
+    parallelism.default: 1
+    jobmanager.execution.failover-strategy: region
+    taskmanager.memory.network.fraction: 0.1
