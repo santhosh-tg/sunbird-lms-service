@@ -70,7 +70,6 @@ azure_cred_storage_key: ""
 azure_cred_storage_secret: ""
 azure_storage_container_name: ""
 
-
 # AWS cloud storage config
 aws_cred_storage_key: ""
 aws_cred_storage_secret: ""
@@ -80,3 +79,9 @@ aws_storage_container_name: ""
 gcloud_cred_client_key: ""
 gcloud_cred_private_secret: ""
 gcloud_storage_container_name: ""
+
+#Cloud storage config
+cloud_client_key: ""
+cloud_storage_secret: ""
+cloud_storage_container: ""
+cloud_storage_endpoint: ""

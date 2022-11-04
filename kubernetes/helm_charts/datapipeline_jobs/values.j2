@@ -154,6 +154,12 @@ async-questionset-publish:
     gcloud_storage_secret= "{{ gcloud_cred_private_secret }}"
     gcloud_storage_container= "{{ gcloud_storage_container_name }}"
 
+    #Cloud Storage Config
+    cloud_client_key= "{{ cloud_client_key }}"
+    cloud_storage_secret= "{{ cloud_storage_secret }}"
+    cloud_storage_container= "{{ cloud_storage_container }}"
+    cloud_storage_endpoint= "{{ cloud_storage_endpoint }}"
+
     master.category.validation.enabled ="{{ master_category_validation_enabled }}"
 
   flink-conf: |+
