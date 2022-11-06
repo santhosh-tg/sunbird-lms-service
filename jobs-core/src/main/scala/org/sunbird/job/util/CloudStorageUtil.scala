@@ -26,7 +26,7 @@ class CloudStorageUtil(config: BaseJobConfig) extends Serializable {
       } else if (StringUtils.equalsIgnoreCase(cloudStorageType, "gcloud")) {
         val storageKey = config.getString("gcloud_client_key", "")
         val storageSecret = config.getString("gcloud_storage_secret", "")
-        storageService = StorageServiceFactory.getStorageService(StorageConfig(cloudStorageType, storageKey, storageSecret))
+        storageService = StorageServiceFactory.getStorageService(StorageConfig(cloudStorageType, storageKey, storageSecret, Option("")))
       } else throw new Exception("Error while initialising cloud storage: " + cloudStorageType)
     }
     storageService

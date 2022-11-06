@@ -46,6 +46,13 @@ flink_job_names:
     taskmanager_memory: 2048m
     taskslots: 1
     cpu_requests: 0.3
+  questionset-republish:
+    job_class_name: 'org.sunbird.job.questionset.task.QuestionSetRePublishStreamTask'
+    replica: 1
+    jobmanager_memory: 2048m
+    taskmanager_memory: 2048m
+    taskslots: 1
+    cpu_requests: 0.3
 
 ### Global vars
 cloud_store: azure
@@ -80,3 +87,7 @@ aws_storage_container_name: ""
 gcloud_cred_client_key: ""
 gcloud_cred_private_secret: ""
 gcloud_storage_container_name: ""
+
+### QuestionSet RePublish Job Config
+inquiry_assessment_republish_kafka_topic_name: "{{ env_name }}.assessment.republish.request"
+inquiry_assessment_republish_group: "{{ env_name }}-questionset-republish-group"

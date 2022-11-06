@@ -163,3 +163,52 @@ async-questionset-publish:
     parallelism.default: 1
     jobmanager.execution.failover-strategy: region
     taskmanager.memory.network.fraction: 0.1
+
+questionset-republish:
+  questionset-republish: |+
+    include file("/data/flink/conf/base-config.conf")
+    kafka {
+      input.topic = "{{ inquiry_assessment_republish_kafka_topic_name }}"
+      post_publish.topic = "{{ inquiry_assessment_post_publish_kafka_topic_name }}"
+      groupId = "{{ inquiry_assessment_republish_group }}"
+    }
+    task {
+      consumer.parallelism = 1
+      parallelism = 1
+      router.parallelism = 1
+    }
+    question {
+      keyspace = "{{ question_keyspace_name }}"
+      table = "question_data"
+    }
+    questionset {
+      keyspace = "{{ hierarchy_keyspace_name }}"
+      table = "questionset_hierarchy"
+    }
+    print_service.base_url = "{{ kp_print_service_base_url }}"
+    cloud_storage_type="{{ cloud_store }}"
+
+    #Azure Cloud Storage Config
+    azure_storage_key="{{ azure_cred_storage_key }}"
+    azure_storage_secret="{{ azure_cred_storage_secret }}"
+    azure_storage_container="{{ azure_storage_container_name }}"
+
+    #AWS Cloud Storage Config
+    aws_storage_key= "{{ aws_cred_storage_key }}"
+    aws_storage_secret= "{{ aws_cred_storage_secret }}"
+    aws_storage_container= "{{ aws_storage_container_name }}"
+
+    #Google Cloud Storage Config
+    gcloud_client_key= "{{ gcloud_cred_client_key }}"
+    gcloud_storage_secret= "{{ gcloud_cred_private_secret }}"
+    gcloud_storage_container= "{{ gcloud_storage_container_name }}"
+
+    master.category.validation.enabled ="{{ master_category_validation_enabled }}"
+
+  flink-conf: |+
+    jobmanager.memory.flink.size: {{ flink_job_names['questionset-republish'].jobmanager_memory }}
+    taskmanager.memory.flink.size: {{ flink_job_names['questionset-republish'].taskmanager_memory }}
+    taskmanager.numberOfTaskSlots: {{ flink_job_names['questionset-republish'].taskslots }}
+    parallelism.default: 1
+    jobmanager.execution.failover-strategy: region
+    taskmanager.memory.network.fraction: 0.1

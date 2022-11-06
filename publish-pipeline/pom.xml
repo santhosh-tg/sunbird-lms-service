@@ -15,6 +15,7 @@
     <modules>
         <module>publish-core</module>
         <module>async-questionset-publish</module>
+        <module>questionset-republish</module>
     </modules>
 
     <build>
