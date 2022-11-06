@@ -47,7 +47,7 @@ flink_job_names:
     taskslots: 1
     cpu_requests: 0.3
   questionset-republish:
-    job_class_name: 'org.sunbird.job.questionset.task.QuestionSetRePublishStreamTask'
+    job_class_name: 'org.sunbird.job.questionset.republish.task.QuestionSetRePublishStreamTask'
     replica: 1
     jobmanager_memory: 2048m
     taskmanager_memory: 2048m
