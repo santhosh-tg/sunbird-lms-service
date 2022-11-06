@@ -1,4 +1,4 @@
-package org.sunbird.job.questionset.publish.helpers
+package org.sunbird.job.questionset.republish.helpers
 
 import org.slf4j.LoggerFactory
 import org.sunbird.job.publish.core.{ExtDataConfig, ObjectData, ObjectExtData}

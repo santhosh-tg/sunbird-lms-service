@@ -1,14 +1,14 @@
-package org.sunbird.job.questionset.function
+package org.sunbird.job.questionset.republish.function
 
 import com.google.gson.reflect.TypeToken
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.slf4j.LoggerFactory
-import org.sunbird.job.questionset.publish.domain.{Event, PublishMetadata}
+import org.sunbird.job.questionset.republish.domain.{Event, PublishMetadata}
 import org.sunbird.job.{BaseProcessFunction, Metrics}
 import java.lang.reflect.Type
 
-import org.sunbird.job.questionset.task.QuestionSetRePublishConfig
+import org.sunbird.job.questionset.republish.task.QuestionSetRePublishConfig
 
 class PublishEventRouter(config: QuestionSetRePublishConfig) extends BaseProcessFunction[Event, String](config) {
 

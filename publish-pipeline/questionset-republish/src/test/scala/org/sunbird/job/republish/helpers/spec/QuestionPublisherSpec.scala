@@ -1,4 +1,4 @@
-package org.sunbird.job.publish.helpers.spec
+package org.sunbird.job.republish.helpers.spec
 
 import akka.dispatch.ExecutionContexts
 import com.typesafe.config.{Config, ConfigFactory}
@@ -13,8 +13,8 @@ import org.sunbird.job.domain.`object`.DefinitionCache
 import org.sunbird.job.publish.config.PublishConfig
 import org.sunbird.job.publish.core.{DefinitionConfig, ExtDataConfig, ObjectData, ObjectExtData}
 import org.sunbird.job.publish.helpers.EcarPackageType
-import org.sunbird.job.questionset.publish.helpers.QuestionPublisher
-import org.sunbird.job.questionset.task.{QuestionSetRePublishConfig}
+import org.sunbird.job.questionset.republish.helpers.QuestionPublisher
+import org.sunbird.job.questionset.republish.task.{QuestionSetRePublishConfig}
 import org.sunbird.job.util.{CassandraUtil, CloudStorageUtil, HttpUtil, Neo4JUtil}
 import java.util
 

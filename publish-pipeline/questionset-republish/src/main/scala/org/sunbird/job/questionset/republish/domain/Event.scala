@@ -1,4 +1,4 @@
-package org.sunbird.job.questionset.publish.domain
+package org.sunbird.job.questionset.republish.domain
 
 import org.apache.commons.lang3.StringUtils
 import org.sunbird.job.domain.reader.JobRequest

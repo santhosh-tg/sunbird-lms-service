@@ -1,4 +1,4 @@
-package org.sunbird.job.questionset.publish.helpers
+package org.sunbird.job.questionset.republish.helpers
 
 import com.datastax.driver.core.Row
 import com.datastax.driver.core.querybuilder.{QueryBuilder, Select}

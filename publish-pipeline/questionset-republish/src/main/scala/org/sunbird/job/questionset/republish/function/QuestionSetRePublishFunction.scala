@@ -1,4 +1,4 @@
-package org.sunbird.job.questionset.function
+package org.sunbird.job.questionset.republish.function
 
 import akka.dispatch.ExecutionContexts
 import com.google.gson.reflect.TypeToken
@@ -11,9 +11,9 @@ import org.sunbird.job.domain.`object`.{DefinitionCache, ObjectDefinition}
 import org.sunbird.job.publish.config.PublishConfig
 import org.sunbird.job.publish.core.{DefinitionConfig, ExtDataConfig, ObjectData}
 import org.sunbird.job.publish.helpers.EcarPackageType
-import org.sunbird.job.questionset.publish.domain.PublishMetadata
-import org.sunbird.job.questionset.publish.helpers.QuestionSetPublisher
-import org.sunbird.job.questionset.task.QuestionSetRePublishConfig
+import org.sunbird.job.questionset.republish.domain.PublishMetadata
+import org.sunbird.job.questionset.republish.helpers.QuestionSetPublisher
+import org.sunbird.job.questionset.republish.task.QuestionSetRePublishConfig
 import org.sunbird.job.util._
 import org.sunbird.job.{BaseProcessFunction, Metrics}
 import java.lang.reflect.Type

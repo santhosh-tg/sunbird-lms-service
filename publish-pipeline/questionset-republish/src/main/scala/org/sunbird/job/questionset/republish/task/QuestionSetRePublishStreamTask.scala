@@ -1,4 +1,4 @@
-package org.sunbird.job.questionset.task
+package org.sunbird.job.questionset.republish.task
 
 import com.typesafe.config.ConfigFactory
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -6,11 +6,13 @@ import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.sunbird.job.connector.FlinkKafkaConnector
-import org.sunbird.job.questionset.function.{PublishEventRouter, QuestionRePublishFunction, QuestionSetRePublishFunction}
-import org.sunbird.job.questionset.publish.domain.{Event, PublishMetadata}
+import org.sunbird.job.questionset.republish.function.{PublishEventRouter, QuestionRePublishFunction, QuestionSetRePublishFunction}
+import org.sunbird.job.questionset.republish.domain.{Event, PublishMetadata}
 import org.sunbird.job.util.{FlinkUtil, HttpUtil}
 import java.io.File
 import java.util
+
+import org.sunbird.job.questionset.republish.task.QuestionSetRePublishConfig
 
 class QuestionSetRePublishStreamTask(config: QuestionSetRePublishConfig, kafkaConnector: FlinkKafkaConnector, httpUtil: HttpUtil) {
 

@@ -1,4 +1,4 @@
-package org.sunbird.job.questionset.function
+package org.sunbird.job.questionset.republish.function
 
 import akka.dispatch.ExecutionContexts
 import com.google.gson.reflect.TypeToken
@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory
 import org.sunbird.job.domain.`object`.DefinitionCache
 import org.sunbird.job.publish.core.{DefinitionConfig, ExtDataConfig, ObjectData}
 import org.sunbird.job.publish.helpers.EcarPackageType
-import org.sunbird.job.questionset.publish.domain.PublishMetadata
-import org.sunbird.job.questionset.publish.helpers.QuestionPublisher
-import org.sunbird.job.questionset.task.QuestionSetRePublishConfig
+import org.sunbird.job.questionset.republish.domain.PublishMetadata
+import org.sunbird.job.questionset.republish.helpers.QuestionPublisher
+import org.sunbird.job.questionset.republish.task.QuestionSetRePublishConfig
 import org.sunbird.job.util.{CassandraUtil, CloudStorageUtil, HttpUtil, Neo4JUtil}
 import org.sunbird.job.{BaseProcessFunction, Metrics}
 import java.lang.reflect.Type
