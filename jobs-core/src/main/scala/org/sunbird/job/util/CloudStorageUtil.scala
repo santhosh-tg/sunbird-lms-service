@@ -17,8 +17,9 @@ class CloudStorageUtil(config: BaseJobConfig) extends Serializable {
     if (null == storageService) {
       val storageKey = config.getString("cloud_storage_key", "")
       val storageSecret = config.getString("cloud_storage_secret", "")
-      val endPoint = config.getString("cloud_storage_endpoint", null)
-      storageService = StorageServiceFactory.getStorageService(StorageConfig(cloudStorageType, storageKey, storageSecret, Option(endPoint)))
+      val endPoint = config.getString("cloud_storage_endpoint", "")
+      val storageEndPoint = if(StringUtils.isNotBlank(endPoint)) Option(endPoint) else None
+      storageService = StorageServiceFactory.getStorageService(StorageConfig(cloudStorageType, storageKey, storageSecret, storageEndPoint))
     }
     storageService
   }
