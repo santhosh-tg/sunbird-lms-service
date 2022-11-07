@@ -137,22 +137,12 @@ async-questionset-publish:
       table = "questionset_hierarchy"
     }
     print_service.base_url = "{{ kp_print_service_base_url }}"
+    #Cloud Storage Config
     cloud_storage_type="{{ cloud_store }}"
-
-    #Azure Cloud Storage Config
-    azure_storage_key="{{ azure_cred_storage_key }}"
-    azure_storage_secret="{{ azure_cred_storage_secret }}"
-    azure_storage_container="{{ azure_storage_container_name }}"
-
-    #AWS Cloud Storage Config
-    aws_storage_key= "{{ aws_cred_storage_key }}"
-    aws_storage_secret= "{{ aws_cred_storage_secret }}"
-    aws_storage_container= "{{ aws_storage_container_name }}"
-
-    #Google Cloud Storage Config
-    gcloud_client_key= "{{ gcloud_cred_client_key }}"
-    gcloud_storage_secret= "{{ gcloud_cred_private_secret }}"
-    gcloud_storage_container= "{{ gcloud_storage_container_name }}"
+    cloud_storage_key= "{{ cloud_storage_key }}"
+    cloud_storage_secret= "{{ cloud_storage_secret }}"
+    cloud_storage_container= "{{ cloud_storage_container }}"
+    cloud_storage_endpoint= "{{ cloud_storage_endpoint }}"
 
     master.category.validation.enabled ="{{ master_category_validation_enabled }}"
 
