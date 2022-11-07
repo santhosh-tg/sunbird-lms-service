@@ -81,7 +81,7 @@ gcloud_cred_private_secret: ""
 gcloud_storage_container_name: ""
 
 #Cloud storage config
-cloud_client_key: ""
+cloud_storage_key: ""
 cloud_storage_secret: ""
 cloud_storage_container: ""
 cloud_storage_endpoint: ""
