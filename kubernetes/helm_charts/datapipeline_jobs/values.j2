@@ -146,10 +146,8 @@ async-questionset-publish:
 
     master.category.validation.enabled ="{{ master_category_validation_enabled }}"
     cloudstroage {
-        metadata {
-            replace_absolute_path={{ cloudstorage_replace_absolute_path }}
-            list= {{ cloudstorage_metadata_list }}
-        }
+        metadata.replace_absolute_path="{{ cloudstorage_replace_absolute_path }}"
+        metadata.list= {{ cloudstorage_metadata_list }}
         read_base_path={{ cloudstorage_base_path }}
         write_base_path={{ valid_cloudstorage_base_urls }}
     }
