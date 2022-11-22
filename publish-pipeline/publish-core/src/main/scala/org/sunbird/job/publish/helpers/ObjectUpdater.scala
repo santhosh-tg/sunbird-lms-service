@@ -35,11 +35,11 @@ trait ObjectUpdater {
 
     if (!StringUtils.equalsIgnoreCase(editId, identifier)) {
       val imgNodeDelQuery = s"""MATCH (n:domain{IL_UNIQUE_ID:"$editId"}) DETACH DELETE n;"""
-      neo4JUtil.executeQuery(imgNodeDelQuery)
+      neo4JUtil.executeQuery(imgNodeDelQuery, "write")
       deleteExternalData(obj, readerConfig)
       logger.info(s"Image Node Data Is Deleted Successfully For ${editId}")
     }
-    val result: StatementResult = neo4JUtil.executeQuery(query)
+    val result: StatementResult = neo4JUtil.executeQuery(query, "write")
     if (null != result && result.hasNext)
       logger.info(s"ObjectUpdater:: saveOnSuccess:: statement result : ${result.next().asMap()}")
     saveExternalData(obj, readerConfig)
@@ -53,7 +53,7 @@ trait ObjectUpdater {
     val metadataUpdateQuery = metaDataQuery(obj)(definitionCache, config)
     val query = s"""MATCH (n:domain{IL_UNIQUE_ID:"$identifier"}) SET n.status="$status",n.prevState="$prevState",$metadataUpdateQuery,$auditPropsUpdateQuery;"""
     logger.info("ObjectUpdater:: updateProcessingNode:: Query: " + query)
-    val result: StatementResult = neo4JUtil.executeQuery(query)
+    val result: StatementResult = neo4JUtil.executeQuery(query, "write")
     if (null != result && result.hasNext)
       logger.info(s"ObjectUpdater:: updateProcessingNode:: statement result : ${result.next().asMap()}")
   }
@@ -69,7 +69,7 @@ trait ObjectUpdater {
     val nodeId = obj.dbId
     val query = s"""MATCH (n:domain{IL_UNIQUE_ID:"$nodeId"}) SET n.status="Failed", n.pkgVersion=$upPkgVersion, n.publishError="$errorMessages", $auditPropsUpdateQuery;"""
     logger.info("ObjectUpdater:: saveOnFailure:: Query: " + query)
-    neo4JUtil.executeQuery(query)
+    neo4JUtil.executeQuery(query, "write")
   }
 
   def metaDataQuery(obj: ObjectData)(definitionCache: DefinitionCache, config: DefinitionConfig): String = {

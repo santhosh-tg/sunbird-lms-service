@@ -44,8 +44,8 @@ class QuestionSetPublishFunction(config: QuestionSetPublishConfig, httpUtil: Htt
 
   override def open(parameters: Configuration): Unit = {
     super.open(parameters)
-    cassandraUtil = new CassandraUtil(config.cassandraHost, config.cassandraPort)
-    neo4JUtil = new Neo4JUtil(config.graphRoutePath, config.graphName)
+    cassandraUtil = new CassandraUtil(config.cassandraHost, config.cassandraPort, config)
+    neo4JUtil = new Neo4JUtil(config.graphRoutePath, config.graphName, config)
     cloudStorageUtil = new CloudStorageUtil(config)
     ec = ExecutionContexts.global
     definitionCache = new DefinitionCache()
@@ -71,7 +71,7 @@ class QuestionSetPublishFunction(config: QuestionSetPublishConfig, httpUtil: Htt
     val readerConfig = ExtDataConfig(config.questionSetKeyspaceName, config.questionSetTableName, definition.getExternalPrimaryKey, definition.getExternalProps)
     val qDef: ObjectDefinition = definitionCache.getDefinition("Question", config.schemaSupportVersionMap.getOrElse("question", "1.0").asInstanceOf[String], config.definitionBasePath)
     val qReaderConfig = ExtDataConfig(config.questionKeyspaceName, qDef.getExternalTable, qDef.getExternalPrimaryKey, qDef.getExternalProps)
-    val objData = getObject(data.identifier, data.pkgVersion, data.mimeType, data.publishType, readerConfig)(neo4JUtil, cassandraUtil)
+    val objData = getObject(data.identifier, data.pkgVersion, data.mimeType, data.publishType, readerConfig)(neo4JUtil, cassandraUtil, config)
     val obj = if (StringUtils.isNotBlank(data.lastPublishedBy)) {
       val newMeta = objData.metadata ++ Map("lastPublishedBy" -> data.lastPublishedBy)
       new ObjectData(objData.identifier, newMeta, objData.extData, objData.hierarchy)
@@ -84,7 +84,7 @@ class QuestionSetPublishFunction(config: QuestionSetPublishConfig, httpUtil: Htt
       cache.del(cacheKey)
       cache.del(obj.identifier)
       // Get all the questions from hierarchy
-      val qList: List[ObjectData] = getQuestions(obj, qReaderConfig)(cassandraUtil)
+      val qList: List[ObjectData] = getQuestions(obj, qReaderConfig)(cassandraUtil, config)
       logger.info("processElement ::: child questions list from hierarchy :::  " + qList)
       // Filter out questions having visibility parent (which need to be published)
       val childQuestions: List[ObjectData] = qList.filter(q => isValidChildQuestion(q, obj.getString("createdBy", "")))
@@ -123,7 +123,7 @@ class QuestionSetPublishFunction(config: QuestionSetPublishConfig, httpUtil: Htt
     val messages = ListBuffer[String]()
     children.foreach(q => {
       val id = q.identifier.replace(".img", "")
-      val obj = getObject(id, 0, q.mimeType, publishType, readerConfig)(neo4JUtil, cassandraUtil)
+      val obj = getObject(id, 0, q.mimeType, publishType, readerConfig)(neo4JUtil, cassandraUtil, config)
       logger.info(s"question metadata for $id : ${obj.metadata}")
       if (!List("Live", "Unlisted").contains(obj.getString("status", ""))) {
         logger.info("Question publishing failed for : " + id)

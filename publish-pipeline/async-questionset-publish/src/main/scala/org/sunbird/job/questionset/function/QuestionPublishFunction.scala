@@ -40,8 +40,8 @@ class QuestionPublishFunction(config: QuestionSetPublishConfig, httpUtil: HttpUt
 
   override def open(parameters: Configuration): Unit = {
     super.open(parameters)
-    cassandraUtil = new CassandraUtil(config.cassandraHost, config.cassandraPort)
-    neo4JUtil = new Neo4JUtil(config.graphRoutePath, config.graphName)
+    cassandraUtil = new CassandraUtil(config.cassandraHost, config.cassandraPort, config)
+    neo4JUtil = new Neo4JUtil(config.graphRoutePath, config.graphName, config)
     cloudStorageUtil = new CloudStorageUtil(config)
     ec = ExecutionContexts.global
     definitionCache = new DefinitionCache()
@@ -63,7 +63,7 @@ class QuestionPublishFunction(config: QuestionSetPublishConfig, httpUtil: HttpUt
   override def processElement(data: PublishMetadata, context: ProcessFunction[PublishMetadata, String]#Context, metrics: Metrics): Unit = {
     logger.info("Question publishing started for : " + data.identifier)
     metrics.incCounter(config.questionPublishEventCount)
-    val objData = getObject(data.identifier, data.pkgVersion, data.mimeType, data.publishType, readerConfig)(neo4JUtil, cassandraUtil)
+    val objData = getObject(data.identifier, data.pkgVersion, data.mimeType, data.publishType, readerConfig)(neo4JUtil, cassandraUtil, config)
     val obj = if (StringUtils.isNotBlank(data.lastPublishedBy)) {
       val newMeta = objData.metadata ++ Map("lastPublishedBy" -> data.lastPublishedBy)
       new ObjectData(objData.identifier, newMeta, objData.extData, objData.hierarchy)
