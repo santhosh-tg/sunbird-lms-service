@@ -145,11 +145,11 @@ async-questionset-publish:
     cloud_storage_endpoint= "{{ cloud_storage_endpoint }}"
 
     master.category.validation.enabled ="{{ master_category_validation_enabled }}"
-    cloudstroage {
-        metadata.replace_absolute_path=true
-        metadata.list=["appIcon","posterImage","artifactUrl","downloadUrl","variants","previewUrl","pdfUrl"]
-        read_base_path="{{ cloudstorage_base_path }}"
-        write_base_path=["https://sunbirdstagingpublic.blob.core.windows.net"]
+    cloudstorage {
+      metadata.replace_absolute_path=true
+      metadata.list=["appIcon","posterImage","artifactUrl","downloadUrl","variants","previewUrl","pdfUrl"]
+      read_base_path="{{ cloudstorage_base_path }}"
+      write_base_path=["https://sunbirdstagingpublic.blob.core.windows.net"]
     }
 
   flink-conf: |+

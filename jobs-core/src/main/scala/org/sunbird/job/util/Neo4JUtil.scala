@@ -80,7 +80,7 @@ class Neo4JUtil(routePath: String, graphId: String, config: BaseJobConfig) {
   }
 
   def executeQuery(query: String, operation: String) = {
-    val updatedQuery = if(StringUtils.equals("write", operation) && isrRelativePathEnabled) CSPMetaUtil.updateRelativePath(query)(config)  else query
+    val updatedQuery = if(StringUtils.equalsIgnoreCase("write", operation) && isrRelativePathEnabled) CSPMetaUtil.updateRelativePath(query)(config)  else query
     val session = driver.session()
     session.run(updatedQuery)
   }
