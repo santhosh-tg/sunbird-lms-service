@@ -94,6 +94,7 @@ trait ObjectBundle {
     val objType = if(obj.getString("objectType", "").replaceAll("Image", "").equalsIgnoreCase("collection")) "content" else obj.getString("objectType", "").replaceAll("Image", "")
     logger.info("ObjectBundle ::: getObjectBundle ::: input objList :::: " + objList)
     // create manifest data
+    //TODO: CNAME: getManifestData May need modification
     val (updatedObjList, dUrls) = getManifestData(obj.identifier, pkgType, objList)
     logger.info("ObjectBundle ::: getObjectBundle ::: updatedObjList :::: " + updatedObjList)
     val downloadUrls: Map[AnyRef, List[String]] = dUrls.flatten.groupBy(_._1).map { case (k, v) => k -> v.map(_._2) }
@@ -102,6 +103,7 @@ trait ObjectBundle {
     val downloadedMedias: List[File] = Await.result(downloadFiles(obj.identifier, downloadUrls, bundlePath), Duration.apply(duration))
     if (downloadUrls.nonEmpty && downloadedMedias.isEmpty)
       throw new InvalidInputException("Error Occurred While Downloading Bundle Media Files For : " + obj.identifier)
+    //TODO: Need to reset urls before writing data to file.
     val manifestFile: File = getManifestFile(obj.identifier, objType, bundlePath, updatedObjList)
     val hierarchyFile: File = getHierarchyFile(obj, bundlePath).getOrElse(new File(bundlePath))
     val fList = if (obj.hierarchy.getOrElse(Map()).nonEmpty) List(manifestFile, hierarchyFile) else List(manifestFile)
