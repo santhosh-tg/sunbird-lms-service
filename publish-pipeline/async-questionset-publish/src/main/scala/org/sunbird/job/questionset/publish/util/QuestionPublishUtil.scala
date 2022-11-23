@@ -21,7 +21,7 @@ object QuestionPublishUtil extends QuestionPublisher {
     logger.info("QuestionPublishUtil :::: publishing child question for questionset : " + identifier)
     objList.map(qData => {
       logger.info("QuestionPublishUtil :::: publishing child question : " + qData.identifier)
-      val objData = getObject(qData.identifier, qData.pkgVersion, qData.mimeType, qData.metadata.getOrElse("publish_type", "Public").toString, readerConfig)(neo4JUtil, cassandraUtil)
+      val objData = getObject(qData.identifier, qData.pkgVersion, qData.mimeType, qData.metadata.getOrElse("publish_type", "Public").toString, readerConfig)(neo4JUtil, cassandraUtil, config)
       val obj = if (StringUtils.isNotBlank(lastPublishedBy)) {
         val newMeta = objData.metadata ++ Map("lastPublishedBy" -> lastPublishedBy)
         new ObjectData(objData.identifier, newMeta, objData.extData, objData.hierarchy)

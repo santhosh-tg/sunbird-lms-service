@@ -4,9 +4,9 @@ import org.slf4j.LoggerFactory
 import org.sunbird.job.domain.`object`.DefinitionCache
 import org.sunbird.job.publish.config.PublishConfig
 import org.sunbird.job.publish.core.{DefinitionConfig, ObjectData}
-import org.sunbird.job.util.{CloudStorageUtil, Neo4JUtil}
-
+import org.sunbird.job.util.{CSPMetaUtil, CloudStorageUtil, Neo4JUtil}
 import java.io.File
+
 import scala.concurrent.ExecutionContext
 
 trait EcarGenerator extends ObjectBundle {
@@ -16,7 +16,8 @@ trait EcarGenerator extends ObjectBundle {
 	def generateEcar(obj: ObjectData, pkgType: List[String])(implicit ec: ExecutionContext, neo4JUtil: Neo4JUtil, cloudStorageUtil: CloudStorageUtil, config: PublishConfig, defCache: DefinitionCache, defConfig: DefinitionConfig): Map[String, String] = {
 		logger.info("Generating Ecar For : " + obj.identifier)
 		val enObjects: List[Map[String, AnyRef]] = getDataForEcar(obj).getOrElse(List())
-		pkgType.flatMap(pkg => Map(pkg -> generateEcar(obj, enObjects, pkg))).toMap
+		val updatedObjList = if(config.getBoolean("cloudstorage.metadata.replace_absolute_path", false)) CSPMetaUtil.updateCloudPath(enObjects)(config) else enObjects
+		pkgType.flatMap(pkg => Map(pkg -> generateEcar(obj, updatedObjList, pkg))).toMap
 	}
 
 	def getDataForEcar(obj: ObjectData): Option[List[Map[String, AnyRef]]]
