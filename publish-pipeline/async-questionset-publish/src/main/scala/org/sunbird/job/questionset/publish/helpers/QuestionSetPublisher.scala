@@ -62,8 +62,10 @@ trait QuestionSetPublisher extends ObjectReader with ObjectValidator with Object
 	override def getHierarchy(identifier: String, pkgVersion: Double, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil, config: PublishConfig): Option[Map[String, AnyRef]] = {
 		val row: Row = Option(getQuestionSetHierarchy(getEditableObjId(identifier, pkgVersion), readerConfig)).getOrElse(getQuestionSetHierarchy(identifier, readerConfig))
 		if (null != row) {
-			val data: Map[String, AnyRef] = ScalaJsonUtil.deserialize[Map[String, AnyRef]](row.getString("hierarchy"))
-			Option(data)
+			val hData: String = row.getString("hierarchy")
+			val updatedHierarchy = if(config.getBoolean("cloudstorage.metadata.replace_absolute_path", false)) CSPMetaUtil.updateAbsolutePath(hData) else hData
+			val hierarchy: Map[String, AnyRef] = if(StringUtils.isNotBlank(updatedHierarchy)) ScalaJsonUtil.deserialize[Map[String, AnyRef]](updatedHierarchy) else Map[String, AnyRef]()
+			Option(hierarchy)
 		} else Option(Map())
 	}
 

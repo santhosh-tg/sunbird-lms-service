@@ -11,7 +11,7 @@ import org.sunbird.job.publish.config.PublishConfig
 import org.sunbird.job.domain.`object`.{DefinitionCache, ObjectDefinition}
 import org.sunbird.job.publish.core.{DefinitionConfig, ExtDataConfig, ObjectData, ObjectExtData}
 import org.sunbird.job.publish.helpers._
-import org.sunbird.job.util.{CassandraUtil, CloudStorageUtil, FileUtils, HttpUtil, JSONUtil, Neo4JUtil, ScalaJsonUtil, Slug}
+import org.sunbird.job.util.{CSPMetaUtil, CassandraUtil, CloudStorageUtil, FileUtils, HttpUtil, JSONUtil, Neo4JUtil, ScalaJsonUtil, Slug}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -26,10 +26,12 @@ trait QuestionSetPublisher extends LiveObjectReader with ObjectValidator with Ob
 	private val defaultManifestVersion = "1.2"
 	val extProps = List("body", "editorState", "answer", "solutions", "instructions", "hints", "media", "responseDeclaration", "interactions", "identifier")
 
-	override def getExternalData(identifier: String, pkgVersion: Double, mimeType: String, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil): Option[ObjectExtData] = {
+	override def getExternalData(identifier: String, pkgVersion: Double, mimeType: String, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil, config: PublishConfig): Option[ObjectExtData] = {
 		val row: Row = getQuestionSetData(identifier, readerConfig)
 		val data: Map[String, AnyRef] = if (null != row) readerConfig.propsMapping.keySet.map(prop => prop -> row.getString(prop.toLowerCase())).toMap.filter(p => StringUtils.isNotBlank(p._2.asInstanceOf[String])) else Map[String, AnyRef]()
-		val hierarchy: Map[String, AnyRef] = if(data.contains("hierarchy")) ScalaJsonUtil.deserialize[Map[String, AnyRef]](data.getOrElse("hierarchy", "{}").asInstanceOf[String]) else Map[String, AnyRef]()
+		val hData: String = data.getOrElse("hierarchy", "{}").asInstanceOf[String]
+		val updatedHierarchy = if(config.getBoolean("cloudstorage.metadata.replace_absolute_path", false)) CSPMetaUtil.updateAbsolutePath(hData) else hData
+		val hierarchy: Map[String, AnyRef] = if(data.contains("hierarchy")) ScalaJsonUtil.deserialize[Map[String, AnyRef]](updatedHierarchy) else Map[String, AnyRef]()
 		val extData:Map[String, AnyRef] = data.filter(p => !StringUtils.equals("hierarchy", p._1))
 		Option(ObjectExtData(Option(extData), Option(hierarchy)))
 	}
@@ -64,11 +66,13 @@ trait QuestionSetPublisher extends LiveObjectReader with ObjectValidator with Ob
 		messages.toList
 	}
 
-	override def getHierarchy(identifier: String, pkgVersion: Double, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil): Option[Map[String, AnyRef]] = {
+	override def getHierarchy(identifier: String, pkgVersion: Double, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil, config: PublishConfig): Option[Map[String, AnyRef]] = {
 		val row: Row = Option(getQuestionSetHierarchy(getEditableObjId(identifier, pkgVersion), readerConfig)).getOrElse(getQuestionSetHierarchy(identifier, readerConfig))
 		if (null != row) {
-			val data: Map[String, AnyRef] = ScalaJsonUtil.deserialize[Map[String, AnyRef]](row.getString("hierarchy"))
-			Option(data)
+			val hData: String = row.getString("hierarchy")
+			val updatedHierarchy = if(config.getBoolean("cloudstorage.metadata.replace_absolute_path", false)) CSPMetaUtil.updateAbsolutePath(hData) else hData
+			val hierarchy: Map[String, AnyRef] = if(StringUtils.isNotBlank(updatedHierarchy)) ScalaJsonUtil.deserialize[Map[String, AnyRef]](updatedHierarchy) else Map[String, AnyRef]()
+			Option(hierarchy)
 		} else Option(Map())
 	}
 
@@ -120,7 +124,7 @@ trait QuestionSetPublisher extends LiveObjectReader with ObjectValidator with Ob
 			}
 		})
 		logger.debug(s"Saving object external data for $identifier | Query : ${query.toString}")
-		val result = cassandraUtil.upsert(query.toString)
+		val result = cassandraUtil.upsert(query.toString, true)
 		if (result) {
 			logger.info(s"Object external data saved successfully for ${identifier}")
 		} else {
@@ -165,17 +169,17 @@ trait QuestionSetPublisher extends LiveObjectReader with ObjectValidator with Ob
 
 	override def enrichObjectMetadata(obj: ObjectData)(implicit neo4JUtil: Neo4JUtil, cassandraUtil: CassandraUtil, readerConfig: ExtDataConfig, cloudStorageUtil: CloudStorageUtil, config: PublishConfig, definitionCache: DefinitionCache, definitionConfig: DefinitionConfig): Option[ObjectData] = {
 		val newMetadata: Map[String, AnyRef] = obj.metadata ++ Map("pkgVersion" -> (obj.pkgVersion + 1).asInstanceOf[AnyRef], "lastPublishedOn" -> getTimeStamp,
-			"publishError" -> null, "variants" -> null, "downloadUrl" -> null, "compatibilityLevel" -> 5.asInstanceOf[AnyRef], "status" -> "Live", "migrationVersion"->1.0.asInstanceOf[AnyRef])
+			"publishError" -> null, "variants" -> null, "downloadUrl" -> null, "compatibilityLevel" -> 5.asInstanceOf[AnyRef], "status" -> "Live", "migrationVersion"->1.1.asInstanceOf[AnyRef])
 		val children: List[Map[String, AnyRef]] = obj.hierarchy.getOrElse(Map()).getOrElse("children", List()).asInstanceOf[List[Map[String, AnyRef]]]
 		Some(new ObjectData(obj.identifier, newMetadata, obj.extData, hierarchy = Some(Map("identifier" -> obj.identifier, "children" -> enrichChildren(children)))))
 	}
 
-	def enrichChildren(children: List[Map[String, AnyRef]])(implicit neo4JUtil: Neo4JUtil, cassandraUtil: CassandraUtil, readerConfig: ExtDataConfig, definitionCache: DefinitionCache, definitionConfig: DefinitionConfig): List[Map[String, AnyRef]] = {
+	def enrichChildren(children: List[Map[String, AnyRef]])(implicit neo4JUtil: Neo4JUtil, cassandraUtil: CassandraUtil, readerConfig: ExtDataConfig, definitionCache: DefinitionCache, definitionConfig: DefinitionConfig, config: PublishConfig): List[Map[String, AnyRef]] = {
 		val newChildren = children.map(element => enrichMetadata(element))
 		newChildren
 	}
 
-	def enrichMetadata(element: Map[String, AnyRef])(implicit neo4JUtil: Neo4JUtil, cassandraUtil: CassandraUtil, readerConfig: ExtDataConfig, definitionCache: DefinitionCache, definitionConfig: DefinitionConfig): Map[String, AnyRef] = {
+	def enrichMetadata(element: Map[String, AnyRef])(implicit neo4JUtil: Neo4JUtil, cassandraUtil: CassandraUtil, readerConfig: ExtDataConfig, definitionCache: DefinitionCache, definitionConfig: DefinitionConfig, config: PublishConfig): Map[String, AnyRef] = {
 		if (StringUtils.equalsIgnoreCase(element.getOrElse("objectType", "").asInstanceOf[String], "QuestionSet")
 		  && StringUtils.equalsIgnoreCase(element.getOrElse("visibility", "").asInstanceOf[String], "Parent")) {
 			val children: List[Map[String, AnyRef]] = element.getOrElse("children", List()).asInstanceOf[List[Map[String, AnyRef]]]
@@ -187,8 +191,8 @@ trait QuestionSetPublisher extends LiveObjectReader with ObjectValidator with Ob
 			childHierarchy ++ Map("index" -> element.getOrElse("index", 0).asInstanceOf[AnyRef], "depth" -> element.getOrElse("depth", 0).asInstanceOf[AnyRef], "parent" -> element.getOrElse("parent", ""))
 		} else if (StringUtils.equalsIgnoreCase(element.getOrElse("objectType", "").toString, "Question")) {
 			val newObject: ObjectData = getObject(element.getOrElse("identifier", "").toString, 0.asInstanceOf[Double], element.getOrElse("mimeType", "").toString, element.getOrElse("publish_type", "Public").toString, readerConfig)
-			/*if(newObject.metadata.getOrElse("migrationVersion", 0).asInstanceOf[AnyRef]==0)
-				throw new */
+			if(newObject.metadata.getOrElse("migrationVersion", 0).asInstanceOf[AnyRef]!=1.2)
+				throw new Exception(s"Children Having Identifier ${newObject.identifier} is not migrated.")
 			val definition: ObjectDefinition = definitionCache.getDefinition("Question", definitionConfig.supportedVersion.getOrElse("question", "1.0").asInstanceOf[String], definitionConfig.basePath)
 			val enMeta = newObject.metadata.filter(x => null != x._2).map(element => (element._1, convertJsonProperties(element, definition.getJsonProps())))
 			logger.info("enrichMeta :::: question object meta ::: " + enMeta)

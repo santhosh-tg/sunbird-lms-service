@@ -25,13 +25,13 @@ trait QuestionPublisher extends LiveObjectReader with ObjectValidator with Objec
   private[this] val logger = LoggerFactory.getLogger(classOf[QuestionPublisher])
   val extProps = List("body", "editorState", "answer", "solutions", "instructions", "hints", "media", "responseDeclaration", "interactions")
 
-  override def getHierarchy(identifier: String, pkgVersion: Double, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil): Option[Map[String, AnyRef]] = None
+  override def getHierarchy(identifier: String, pkgVersion: Double, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil, config: PublishConfig): Option[Map[String, AnyRef]] = None
 
   override def enrichObjectMetadata(obj: ObjectData)(implicit neo4JUtil: Neo4JUtil, cassandraUtil: CassandraUtil, readerConfig: ExtDataConfig, cloudStorageUtil: CloudStorageUtil, config: PublishConfig, definitionCache: DefinitionCache, definitionConfig: DefinitionConfig): Option[ObjectData] = {
     val pkgVersion = obj.metadata.getOrElse("pkgVersion", 0.0.asInstanceOf[Number]).asInstanceOf[Number].intValue() + 1
     val publishType = obj.getString("publish_type", "Public")
     val status = if (StringUtils.equals("Private", publishType)) "Unlisted" else "Live"
-    val updatedMeta = obj.metadata ++ Map("pkgVersion" -> pkgVersion.asInstanceOf[AnyRef], "status" -> status, "migrationVersion"->1.0.asInstanceOf[AnyRef])
+    val updatedMeta = obj.metadata ++ Map("pkgVersion" -> pkgVersion.asInstanceOf[AnyRef], "status" -> status, "migrationVersion"->1.1.asInstanceOf[AnyRef])
     Some(new ObjectData(obj.identifier, updatedMeta, obj.extData, obj.hierarchy))
   }
 
@@ -50,7 +50,7 @@ trait QuestionPublisher extends LiveObjectReader with ObjectValidator with Objec
     messages.toList
   }
 
-  override def getExternalData(identifier: String, pkgVersion: Double, mimeType: String, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil): Option[ObjectExtData] = {
+  override def getExternalData(identifier: String, pkgVersion: Double, mimeType: String, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil, config: PublishConfig): Option[ObjectExtData] = {
     val row: Row = getQuestionData(identifier, readerConfig)
     val data = if (null != row) Option(extProps.map(prop => prop -> row.getString(prop.toLowerCase())).toMap.filter(p => StringUtils.isNotBlank(p._2))) else Option(Map[String, AnyRef]())
     Option(ObjectExtData(data))

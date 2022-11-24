@@ -55,8 +55,9 @@ object CSPMetaUtil {
 		val cspMeta: util.List[String] = config.config.getStringList("cloudstorage.metadata.list")
 		val validCSPSource: List[String] = config.config.getStringList("cloudstorage.write_base_path").asScala.toList
 		val basePaths: Array[String] = validCSPSource.map(source => source + java.io.File.separator + config.getString("cloud_storage_container", "")).toArray
+		val repArray = getReplacementData(basePaths, "CLOUD_STORAGE_BASE_PATH")
 		val result = if (MapUtils.isNotEmpty(data)) {
-			val updatedMeta: util.Map[String, AnyRef] = data.asScala.map(x => if (cspMeta.contains(x._1)) (x._1, getBasePath(x._1, x._2, basePaths, Array("CLOUD_STORAGE_BASE_PATH"))) else (x._1, x._2)).toMap.asJava
+			val updatedMeta: util.Map[String, AnyRef] = data.asScala.map(x => if (cspMeta.contains(x._1)) (x._1, getBasePath(x._1, x._2, basePaths, repArray)) else (x._1, x._2)).toMap.asJava
 			updatedMeta
 		} else data
 		logger.info("CSPMetaUtil ::: updateRelativePath util.Map[String, AnyRef] ::: data after url replace :: " + result)
@@ -67,7 +68,8 @@ object CSPMetaUtil {
 		logger.info("CSPMetaUtil ::: updateRelativePath ::: query before url replace :: " + query)
 		val validCSPSource: List[String] = config.config.getStringList("cloudstorage.write_base_path").asScala.toList
 		val paths: Array[String] = validCSPSource.map(s => s + java.io.File.separator + config.getString("cloud_storage_container", "")).toArray
-		val result = StringUtils.replaceEach(query, paths, Array("CLOUD_STORAGE_BASE_PATH"))
+		val repArray = getReplacementData(paths, "CLOUD_STORAGE_BASE_PATH")
+		val result = StringUtils.replaceEach(query, paths, repArray)
 		logger.info("CSPMetaUtil ::: updateRelativePath ::: query after url replace :: " + result)
 		result
 	}
@@ -77,10 +79,11 @@ object CSPMetaUtil {
 		val cspMeta: util.List[String] = config.config.getStringList("cloudstorage.metadata.list")
 		val validCSPSource: List[String] = config.config.getStringList("cloudstorage.write_base_path").asScala.toList
 		val paths: Array[String] = validCSPSource.map(s => s + java.io.File.separator + config.getString("cloud_storage_container", "")).toArray
-		val newCloudPath: Array[String] = Array[String](config.getString("cloudstorage.read_base_path", "") + java.io.File.separator + config.getString("cloud_storage_container", ""))
+		val newCloudPath: String = config.getString("cloudstorage.read_base_path", "") + java.io.File.separator + config.getString("cloud_storage_container", "")
+		val repArray = getReplacementData(paths, newCloudPath)
 		val result = objList.map(data => {
 			if (null != data && data.nonEmpty) {
-				data.map(x => if (cspMeta.contains(x._1)) (x._1, getBasePath(x._1, x._2, paths, newCloudPath)) else (x._1, x._2)).toMap
+				data.map(x => if (cspMeta.contains(x._1)) (x._1, getBasePath(x._1, x._2, paths, repArray)) else (x._1, x._2)).toMap
 			} else data
 		})
 		logger.info("CSPMetaUtil ::: updateCloudPath List[Map[String, AnyRef]] ::: data after url replace :: " + result)
@@ -108,6 +111,14 @@ object CSPMetaUtil {
 		} else value
 		logger.info(s"CSPMetaUtil ::: getBasePath ::: Updated Path for Key : ${key} & Updated Value is : ${res}")
 		res
+	}
+
+	def getReplacementData(oldPath: Array[String], repStr: String): Array[String] = {
+		var repArray = new Array[String](oldPath.length)
+		for(i <- 0 to oldPath.length-1) {
+			repArray(i) = repStr
+		}
+		repArray
 	}
 
 }

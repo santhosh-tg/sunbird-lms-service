@@ -40,8 +40,8 @@ class QuestionRePublishFunction(config: QuestionSetRePublishConfig, httpUtil: Ht
 
   override def open(parameters: Configuration): Unit = {
     super.open(parameters)
-    cassandraUtil = new CassandraUtil(config.cassandraHost, config.cassandraPort)
-    neo4JUtil = new Neo4JUtil(config.graphRoutePath, config.graphName)
+    cassandraUtil = new CassandraUtil(config.cassandraHost, config.cassandraPort, config)
+    neo4JUtil = new Neo4JUtil(config.graphRoutePath, config.graphName, config)
     cloudStorageUtil = new CloudStorageUtil(config)
     ec = ExecutionContexts.global
     definitionCache = new DefinitionCache()
@@ -63,7 +63,7 @@ class QuestionRePublishFunction(config: QuestionSetRePublishConfig, httpUtil: Ht
   override def processElement(data: PublishMetadata, context: ProcessFunction[PublishMetadata, String]#Context, metrics: Metrics): Unit = {
     logger.info("Question publishing started for : " + data.identifier)
     metrics.incCounter(config.questionRePublishEventCount)
-    val obj = getObject(data.identifier, data.pkgVersion, data.mimeType, data.publishType, readerConfig)(neo4JUtil, cassandraUtil)
+    val obj = getObject(data.identifier, data.pkgVersion, data.mimeType, data.publishType, readerConfig)(neo4JUtil, cassandraUtil,config)
     val messages: List[String] = validate(obj, obj.identifier, validateQuestion)
     if (messages.isEmpty) {
       cache.del(obj.identifier)
@@ -75,7 +75,8 @@ class QuestionRePublishFunction(config: QuestionSetRePublishConfig, httpUtil: Ht
       metrics.incCounter(config.questionRePublishSuccessEventCount)
       logger.info("Question publishing completed successfully for : " + data.identifier)
     } else {
-      saveOnFailure(obj, messages, data.pkgVersion)(neo4JUtil)
+      val objWithMigrVersion = new ObjectData(obj.identifier, obj.metadata ++ Map[String, AnyRef]("migrationVersion"->0.2.asInstanceOf[AnyRef]), obj.extData, obj.hierarchy)
+      saveOnFailure(objWithMigrVersion, messages, data.pkgVersion)(neo4JUtil)
       metrics.incCounter(config.questionRePublishFailedEventCount)
       logger.info("Question publishing failed for : " + data.identifier)
     }
