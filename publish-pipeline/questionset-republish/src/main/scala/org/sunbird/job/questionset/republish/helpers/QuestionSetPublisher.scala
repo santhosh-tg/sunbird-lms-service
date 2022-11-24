@@ -184,14 +184,14 @@ trait QuestionSetPublisher extends LiveObjectReader with ObjectValidator with Ob
 		  && StringUtils.equalsIgnoreCase(element.getOrElse("visibility", "").asInstanceOf[String], "Parent")) {
 			val children: List[Map[String, AnyRef]] = element.getOrElse("children", List()).asInstanceOf[List[Map[String, AnyRef]]]
 			val enrichedChildren = enrichChildren(children)
-			element ++ Map("children" -> enrichedChildren, "status" -> "Live", "migrationVersion"->1.0.asInstanceOf[AnyRef])
+			element ++ Map("children" -> enrichedChildren, "status" -> "Live", "migrationVersion"->1.1.asInstanceOf[AnyRef])
 		} else if (StringUtils.equalsIgnoreCase(element.getOrElse("objectType", "").toString, "QuestionSet")
 		  && StringUtils.equalsIgnoreCase(element.getOrElse("visibility", "").toString, "Default")) {
 			val childHierarchy: Map[String, AnyRef] = getHierarchy(element.getOrElse("identifier", "").toString, 0.asInstanceOf[Double], readerConfig).getOrElse(Map())
 			childHierarchy ++ Map("index" -> element.getOrElse("index", 0).asInstanceOf[AnyRef], "depth" -> element.getOrElse("depth", 0).asInstanceOf[AnyRef], "parent" -> element.getOrElse("parent", ""))
 		} else if (StringUtils.equalsIgnoreCase(element.getOrElse("objectType", "").toString, "Question")) {
 			val newObject: ObjectData = getObject(element.getOrElse("identifier", "").toString, 0.asInstanceOf[Double], element.getOrElse("mimeType", "").toString, element.getOrElse("publish_type", "Public").toString, readerConfig)
-			if(newObject.metadata.getOrElse("migrationVersion", 0).asInstanceOf[AnyRef]!=1.2)
+			if(newObject.metadata.getOrElse("migrationVersion", 0).asInstanceOf[AnyRef]!=1.1)
 				throw new Exception(s"Children Having Identifier ${newObject.identifier} is not migrated.")
 			val definition: ObjectDefinition = definitionCache.getDefinition("Question", definitionConfig.supportedVersion.getOrElse("question", "1.0").asInstanceOf[String], definitionConfig.basePath)
 			val enMeta = newObject.metadata.filter(x => null != x._2).map(element => (element._1, convertJsonProperties(element, definition.getJsonProps())))
