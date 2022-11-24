@@ -15,6 +15,8 @@ import org.sunbird.job.questionset.republish.task.QuestionSetRePublishConfig
 import org.sunbird.job.util.{CassandraUtil, CloudStorageUtil, HttpUtil, Neo4JUtil}
 import org.sunbird.job.{BaseProcessFunction, Metrics}
 import java.lang.reflect.Type
+import java.text.SimpleDateFormat
+import java.util.Date
 
 import org.apache.commons.lang3.StringUtils
 import org.sunbird.job.cache.{DataCache, RedisConnect}
@@ -85,4 +87,11 @@ class QuestionRePublishFunction(config: QuestionSetRePublishConfig, httpUtil: Ht
       logger.info("Question publishing failed for : " + data.identifier)
     }
   }
+
+  private def auditPropsUpdateQuery(): String = {
+    val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+    val updatedOn = sdf.format(new Date())
+    s"""n.lastUpdatedOn="$updatedOn",n.lastStatusChangedOn="$updatedOn""""
+  }
+  
 }
