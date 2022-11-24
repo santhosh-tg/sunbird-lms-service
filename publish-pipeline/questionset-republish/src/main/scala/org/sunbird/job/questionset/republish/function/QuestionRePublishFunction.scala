@@ -75,8 +75,12 @@ class QuestionRePublishFunction(config: QuestionSetRePublishConfig, httpUtil: Ht
       metrics.incCounter(config.questionRePublishSuccessEventCount)
       logger.info("Question publishing completed successfully for : " + data.identifier)
     } else {
-      val objWithMigrVersion = new ObjectData(obj.identifier, obj.metadata ++ Map[String, AnyRef]("migrationVersion"->0.2.asInstanceOf[AnyRef]), obj.extData, obj.hierarchy)
-      saveOnFailure(objWithMigrVersion, messages, data.pkgVersion)(neo4JUtil)
+      val upPkgVersion = obj.pkgVersion + 1
+      val migrVer = 0.2
+      val nodeId = obj.dbId
+      val errorMessages = messages.mkString("; ")
+      val query = s"""MATCH (n:domain{IL_UNIQUE_ID:"$nodeId"}) SET n.status="Failed", n.pkgVersion=$upPkgVersion, n.publishError="$errorMessages", n.migrationVersion=$migrVer, $auditPropsUpdateQuery;"""
+      neo4JUtil.executeQuery(query, "write")
       metrics.incCounter(config.questionRePublishFailedEventCount)
       logger.info("Question publishing failed for : " + data.identifier)
     }

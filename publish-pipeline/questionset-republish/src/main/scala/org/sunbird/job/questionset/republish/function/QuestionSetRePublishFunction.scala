@@ -17,6 +17,8 @@ import org.sunbird.job.questionset.republish.task.QuestionSetRePublishConfig
 import org.sunbird.job.util._
 import org.sunbird.job.{BaseProcessFunction, Metrics}
 import java.lang.reflect.Type
+import java.text.SimpleDateFormat
+import java.util.Date
 
 import org.sunbird.job.cache.{DataCache, RedisConnect}
 
@@ -96,15 +98,22 @@ class QuestionSetRePublishFunction(config: QuestionSetRePublishConfig, httpUtil:
 				logger.info("QuestionSet publishing completed successfully for : " + data.identifier)
 				metrics.incCounter(config.questionSetRePublishSuccessEventCount)
 			} else {
-				val objWithMigrVersion = new ObjectData(obj.identifier, obj.metadata ++ Map[String, AnyRef]("migrationVersion"->0.2.asInstanceOf[AnyRef]), obj.extData, obj.hierarchy)
-				saveOnFailure(objWithMigrVersion, messages, data.pkgVersion)(neo4JUtil)
+				val upPkgVersion = obj.pkgVersion + 1
+				val migrVer = 0.2
+				val nodeId = obj.dbId
+				val errorMessages = messages.mkString("; ")
+				val query = s"""MATCH (n:domain{IL_UNIQUE_ID:"$nodeId"}) SET n.status="Failed", n.pkgVersion=$upPkgVersion, n.publishError="$errorMessages", n.migrationVersion=$migrVer, $auditPropsUpdateQuery;"""
+				neo4JUtil.executeQuery(query, "write")
 				metrics.incCounter(config.questionSetRePublishFailedEventCount)
-				logger.info("QuestionSet publishing failed for : " + data.identifier)
+				logger.info("QuestionSet Re-publishing failed for : " + data.identifier)
 			}
 		} catch {
 			case e: Exception => {
-				val objWithMigrVersion = new ObjectData(obj.identifier, obj.metadata ++ Map[String, AnyRef]("migrationVersion"->0.2.asInstanceOf[AnyRef]), obj.extData, obj.hierarchy)
-				saveOnFailure(objWithMigrVersion, List(e.getMessage), data.pkgVersion)(neo4JUtil)
+				val upPkgVersion = obj.pkgVersion + 1
+				val migrVer = 0.2
+				val nodeId = obj.dbId
+				val query = s"""MATCH (n:domain{IL_UNIQUE_ID:"$nodeId"}) SET n.status="Failed", n.pkgVersion=$upPkgVersion, n.publishError="${e.getMessage}", n.migrationVersion=$migrVer, $auditPropsUpdateQuery;"""
+				neo4JUtil.executeQuery(query, "write")
 			}
 		}
 	}
@@ -127,6 +136,12 @@ class QuestionSetRePublishFunction(config: QuestionSetRePublishConfig, httpUtil:
 	def isValidChildQuestion(obj: ObjectData, createdBy: String): Boolean = {
 		//TODO: Change the logic
 		StringUtils.equalsIgnoreCase("Parent", obj.getString("visibility", "")) || (StringUtils.equalsIgnoreCase("Default", obj.getString("visibility", "")) && !liveStatus.contains(obj.getString("status", "")) && StringUtils.equalsIgnoreCase(createdBy, obj.getString("createdBy", "")))
+	}
+
+	private def auditPropsUpdateQuery(): String = {
+		val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+		val updatedOn = sdf.format(new Date())
+		s"""n.lastUpdatedOn="$updatedOn",n.lastStatusChangedOn="$updatedOn""""
 	}
 
 }
