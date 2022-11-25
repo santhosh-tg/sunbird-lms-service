@@ -1,4 +1,6 @@
-package org.sunbird.job.questionset.publish.helpers
+package org.sunbird.job.questionset.republish.helpers
+
+import java.io.File
 
 import com.datastax.driver.core.Row
 import com.datastax.driver.core.querybuilder.{Clause, Insert, QueryBuilder, Select}
@@ -9,18 +11,23 @@ import org.sunbird.job.publish.config.PublishConfig
 import org.sunbird.job.domain.`object`.{DefinitionCache, ObjectDefinition}
 import org.sunbird.job.publish.core.{DefinitionConfig, ExtDataConfig, ObjectData, ObjectExtData}
 import org.sunbird.job.publish.helpers._
-import org.sunbird.job.util.{CSPMetaUtil, CassandraUtil, CloudStorageUtil, JSONUtil, Neo4JUtil, ScalaJsonUtil}
+import org.sunbird.job.util.{CSPMetaUtil, CassandraUtil, CloudStorageUtil, FileUtils, HttpUtil, JSONUtil, Neo4JUtil, ScalaJsonUtil, Slug}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.duration.Duration
 
-trait QuestionSetPublisher extends ObjectReader with ObjectValidator with ObjectUpdater with ObjectEnrichment with EcarGenerator with QuestionPdfGenerator {
+trait QuestionSetPublisher extends LiveObjectReader with ObjectValidator with ObjectUpdater with ObjectEnrichment with EcarGenerator with QuestionPdfGenerator {
 
 	private[this] val logger = LoggerFactory.getLogger(classOf[QuestionSetPublisher])
+	private val bundleLocation: String = "/tmp"
+	private val indexFileName = "index.json"
+	private val defaultManifestVersion = "1.2"
 	val extProps = List("body", "editorState", "answer", "solutions", "instructions", "hints", "media", "responseDeclaration", "interactions", "identifier")
 
-	override def getExtData(identifier: String, pkgVersion: Double, mimeType: String, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil, config: PublishConfig): Option[ObjectExtData] = {
-		val row: Row = Option(getQuestionSetData(getEditableObjId(identifier, pkgVersion), readerConfig)).getOrElse(getQuestionSetData(identifier, readerConfig))
+	override def getExternalData(identifier: String, pkgVersion: Double, mimeType: String, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil, config: PublishConfig): Option[ObjectExtData] = {
+		val row: Row = getQuestionSetData(identifier, readerConfig)
 		val data: Map[String, AnyRef] = if (null != row) readerConfig.propsMapping.keySet.map(prop => prop -> row.getString(prop.toLowerCase())).toMap.filter(p => StringUtils.isNotBlank(p._2.asInstanceOf[String])) else Map[String, AnyRef]()
 		val hData: String = data.getOrElse("hierarchy", "{}").asInstanceOf[String]
 		val updatedHierarchy = if(config.getBoolean("cloudstorage.metadata.replace_absolute_path", false)) CSPMetaUtil.updateAbsolutePath(hData) else hData
@@ -77,7 +84,7 @@ trait QuestionSetPublisher extends ObjectReader with ObjectValidator with Object
 		cassandraUtil.findOne(selectWhere.toString)
 	}
 
-	override def getExtDatas(identifiers: List[String], readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil,config: PublishConfig): Option[Map[String, AnyRef]] = {
+	override def getExtDatas(identifiers: List[String], readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil): Option[Map[String, AnyRef]] = {
 		val rows = getQuestionsExtData(identifiers, readerConfig)(cassandraUtil).asScala
 		if (rows.nonEmpty)
 			Option(rows.map(row => row.getString("identifier") -> extProps.map(prop => (prop -> row.getString(prop.toLowerCase()))).toMap).toMap)
@@ -85,7 +92,7 @@ trait QuestionSetPublisher extends ObjectReader with ObjectValidator with Object
 			Option(Map[String, AnyRef]())
 	}
 
-	override def getHierarchies(identifiers: List[String], readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil, config: PublishConfig): Option[Map[String, AnyRef]] = {
+	override def getHierarchies(identifiers: List[String], readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil): Option[Map[String, AnyRef]] = {
 		None
 	}
 
@@ -129,7 +136,7 @@ trait QuestionSetPublisher extends ObjectReader with ObjectValidator with Object
 	}
 
 	def getQuestions(qsObj: ObjectData, readerConfig: ExtDataConfig)
-	                (implicit cassandraUtil: CassandraUtil, config: PublishConfig): List[ObjectData] = {
+	                (implicit cassandraUtil: CassandraUtil): List[ObjectData] = {
 		val childrenMaps: Map[String, AnyRef] = populateChildrenMapRecursively(qsObj.hierarchy.getOrElse(Map()).getOrElse("children", List()).asInstanceOf[List[Map[String, AnyRef]]], Map())
 		logger.info("QuestionSetPublisher ::: getQuestions ::: child questions  ::::: " + childrenMaps)
 		val extMap = getExtDatas(childrenMaps.keys.toList, readerConfig)
@@ -162,7 +169,7 @@ trait QuestionSetPublisher extends ObjectReader with ObjectValidator with Object
 
 	override def enrichObjectMetadata(obj: ObjectData)(implicit neo4JUtil: Neo4JUtil, cassandraUtil: CassandraUtil, readerConfig: ExtDataConfig, cloudStorageUtil: CloudStorageUtil, config: PublishConfig, definitionCache: DefinitionCache, definitionConfig: DefinitionConfig): Option[ObjectData] = {
 		val newMetadata: Map[String, AnyRef] = obj.metadata ++ Map("pkgVersion" -> (obj.pkgVersion + 1).asInstanceOf[AnyRef], "lastPublishedOn" -> getTimeStamp,
-			"publishError" -> null, "variants" -> null, "downloadUrl" -> null, "compatibilityLevel" -> 5.asInstanceOf[AnyRef], "status" -> "Live")
+			"publishError" -> null, "variants" -> null, "downloadUrl" -> null, "compatibilityLevel" -> 5.asInstanceOf[AnyRef], "status" -> "Live", "migrationVersion"->1.1.asInstanceOf[AnyRef])
 		val children: List[Map[String, AnyRef]] = obj.hierarchy.getOrElse(Map()).getOrElse("children", List()).asInstanceOf[List[Map[String, AnyRef]]]
 		Some(new ObjectData(obj.identifier, newMetadata, obj.extData, hierarchy = Some(Map("identifier" -> obj.identifier, "children" -> enrichChildren(children)))))
 	}
@@ -177,13 +184,15 @@ trait QuestionSetPublisher extends ObjectReader with ObjectValidator with Object
 		  && StringUtils.equalsIgnoreCase(element.getOrElse("visibility", "").asInstanceOf[String], "Parent")) {
 			val children: List[Map[String, AnyRef]] = element.getOrElse("children", List()).asInstanceOf[List[Map[String, AnyRef]]]
 			val enrichedChildren = enrichChildren(children)
-			element ++ Map("children" -> enrichedChildren, "status" -> "Live")
+			element ++ Map("children" -> enrichedChildren, "status" -> "Live", "migrationVersion"->1.1.asInstanceOf[AnyRef])
 		} else if (StringUtils.equalsIgnoreCase(element.getOrElse("objectType", "").toString, "QuestionSet")
 		  && StringUtils.equalsIgnoreCase(element.getOrElse("visibility", "").toString, "Default")) {
 			val childHierarchy: Map[String, AnyRef] = getHierarchy(element.getOrElse("identifier", "").toString, 0.asInstanceOf[Double], readerConfig).getOrElse(Map())
 			childHierarchy ++ Map("index" -> element.getOrElse("index", 0).asInstanceOf[AnyRef], "depth" -> element.getOrElse("depth", 0).asInstanceOf[AnyRef], "parent" -> element.getOrElse("parent", ""))
 		} else if (StringUtils.equalsIgnoreCase(element.getOrElse("objectType", "").toString, "Question")) {
 			val newObject: ObjectData = getObject(element.getOrElse("identifier", "").toString, 0.asInstanceOf[Double], element.getOrElse("mimeType", "").toString, element.getOrElse("publish_type", "Public").toString, readerConfig)
+			if(newObject.metadata.getOrElse("migrationVersion", 0).asInstanceOf[AnyRef]!=1.1)
+				throw new Exception(s"Children Having Identifier ${newObject.identifier} is not migrated.")
 			val definition: ObjectDefinition = definitionCache.getDefinition("Question", definitionConfig.supportedVersion.getOrElse("question", "1.0").asInstanceOf[String], definitionConfig.basePath)
 			val enMeta = newObject.metadata.filter(x => null != x._2).map(element => (element._1, convertJsonProperties(element, definition.getJsonProps())))
 			logger.info("enrichMeta :::: question object meta ::: " + enMeta)
@@ -193,4 +202,64 @@ trait QuestionSetPublisher extends ObjectReader with ObjectValidator with Object
 
 	override def deleteExternalData(obj: ObjectData, readerConfig: ExtDataConfig)(implicit cassandraUtil: CassandraUtil) = None
 
+	def updateArtifactUrl(obj: ObjectData, pkgType: String)(implicit ec: ExecutionContext, neo4JUtil: Neo4JUtil, cloudStorageUtil: CloudStorageUtil, defCache: DefinitionCache, defConfig: DefinitionConfig, config: PublishConfig, httpUtil: HttpUtil): ObjectData = {
+		val bundlePath = bundleLocation + File.separator + obj.identifier + File.separator + System.currentTimeMillis + "_temp"
+		try {
+			val objType = obj.getString("objectType", "")
+			val objList = getDataForEcar(obj).getOrElse(List())
+			val (updatedObjList, dUrls) = getManifestData(obj.identifier, pkgType, objList)
+			val downloadUrls: Map[AnyRef, List[String]] = dUrls.flatten.groupBy(_._1).map { case (k, v) => k -> v.map(_._2) }
+			logger.info("QuestionPublisher ::: updateArtifactUrl ::: downloadUrls :::: " + downloadUrls)
+			val duration: String = config.getString("media_download_duration", "300 seconds")
+			val downloadedMedias: List[File] = Await.result(downloadFiles(obj.identifier, downloadUrls, bundlePath), Duration.apply(duration))
+			if (downloadUrls.nonEmpty && downloadedMedias.isEmpty)
+				throw new Exception("Error Occurred While Downloading Bundle Media Files For : " + obj.identifier)
+
+			getIndexFile(obj.identifier, objType, bundlePath, updatedObjList)
+
+			// create zip package
+			val zipFileName: String = bundlePath + File.separator + obj.identifier + "_" + System.currentTimeMillis + ".zip"
+			FileUtils.createZipPackage(bundlePath, zipFileName)
+
+			// upload zip file to blob and set artifactUrl
+			val result: Array[String] = uploadArtifactToCloud(new File(zipFileName), obj.identifier)
+
+			val updatedMeta = obj.metadata ++ Map("artifactUrl" -> result(1))
+			new ObjectData(obj.identifier, updatedMeta, obj.extData, obj.hierarchy)
+		} catch {
+			case ex: Exception =>
+				ex.printStackTrace()
+				throw new Exception(s"Error While Generating $pkgType ECAR Bundle For : " + obj.identifier, ex)
+		} finally {
+			FileUtils.deleteDirectory(new File(bundlePath))
+		}
+	}
+
+	@throws[Exception]
+	def getIndexFile(identifier: String, objType: String, bundlePath: String, objList: List[Map[String, AnyRef]]): File = {
+		try {
+			val file: File = new File(bundlePath + File.separator + indexFileName)
+			val header: String = s"""{"id": "sunbird.${objType.toLowerCase()}.archive", "ver": "$defaultManifestVersion" ,"ts":"$getTimeStamp", "params":{"resmsgid": "$getUUID"}, "archive":{ "count": ${objList.size}, "ttl":24, "items": """
+			val mJson = header + ScalaJsonUtil.serialize(objList) + "}}"
+			FileUtils.writeStringToFile(file, mJson)
+			file
+		} catch {
+			case e: Exception => throw new Exception("Exception occurred while writing manifest file for : " + identifier, e)
+		}
+	}
+
+	private def uploadArtifactToCloud(uploadFile: File, identifier: String)(implicit cloudStorageUtil: CloudStorageUtil): Array[String] = {
+		var urlArray = new Array[String](2)
+		// Check the cloud folder convention to store artifact.zip file with Mahesh
+		try {
+			val folder = "question" + File.separator + Slug.makeSlug(identifier, isTransliterate = true)
+			urlArray = cloudStorageUtil.uploadFile(folder, uploadFile)
+		} catch {
+			case e: Exception =>
+				cloudStorageUtil.deleteFile(uploadFile.getAbsolutePath, Option(false))
+				logger.error("Error while uploading the Artifact file.", e)
+				throw new Exception("Error while uploading the Artifact File.", e)
+		}
+		urlArray
+	}
 }

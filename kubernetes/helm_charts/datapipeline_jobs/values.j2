@@ -159,3 +159,47 @@ async-questionset-publish:
     parallelism.default: 1
     jobmanager.execution.failover-strategy: region
     taskmanager.memory.network.fraction: 0.1
+
+questionset-republish:
+  questionset-republish: |+
+    include file("/data/flink/conf/base-config.conf")
+    kafka {
+      input.topic = "{{ inquiry_assessment_republish_kafka_topic_name }}"
+      post_publish.topic = "{{ inquiry_assessment_post_publish_kafka_topic_name }}"
+      groupId = "{{ inquiry_assessment_republish_group }}"
+    }
+    task {
+      consumer.parallelism = 1
+      parallelism = 1
+      router.parallelism = 1
+    }
+    question {
+      keyspace = "{{ question_keyspace_name }}"
+      table = "question_data"
+    }
+    questionset {
+      keyspace = "{{ hierarchy_keyspace_name }}"
+      table = "questionset_hierarchy"
+    }
+    print_service.base_url = "{{ kp_print_service_base_url }}"
+    #Cloud Storage Config
+    cloud_storage_type="{{ cloud_store }}"
+    cloud_storage_key= "{{ cloud_storage_key }}"
+    cloud_storage_secret= "{{ cloud_storage_secret }}"
+    cloud_storage_container= "{{ cloud_storage_container }}"
+    cloud_storage_endpoint= "{{ cloud_storage_endpoint }}"
+    master.category.validation.enabled ="{{ master_category_validation_enabled }}"
+    cloudstorage {
+      metadata.replace_absolute_path=true
+      metadata.list={{ cloudstorage_metadata_list }}
+      read_base_path="{{ cloudstorage_base_path }}"
+      write_base_path={{ valid_cloudstorage_base_urls }}
+    }
+
+  flink-conf: |+
+    jobmanager.memory.flink.size: {{ flink_job_names['questionset-republish'].jobmanager_memory }}
+    taskmanager.memory.flink.size: {{ flink_job_names['questionset-republish'].taskmanager_memory }}
+    taskmanager.numberOfTaskSlots: {{ flink_job_names['questionset-republish'].taskslots }}
+    parallelism.default: 1
+    jobmanager.execution.failover-strategy: region
+    taskmanager.memory.network.fraction: 0.1
