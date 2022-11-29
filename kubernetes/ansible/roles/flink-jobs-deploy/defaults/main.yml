@@ -72,16 +72,10 @@ inquiry_assessment_publish_group: "{{ env_name }}-questionset-publish-group"
 question_keyspace_name: "{{instance}}_question_store"
 hierarchy_keyspace_name: "{{instance}}_hierarchy_store"
 
-#Cloud storage config
-cloud_storage_key: ""
-cloud_storage_secret: ""
-cloud_storage_container: ""
-cloud_storage_endpoint: ""
-
-cloudstorage_replace_absolute_path: true
-cloudstorage_base_path: "https://sunbirdstagingpublic.blob.core.windows.net"
+# CNAME Config
+cloudstorage_base_path: "https://sunbirddevbbpublic.blob.core.windows.net"
 cloudstorage_metadata_list: '["appIcon","posterImage","artifactUrl","downloadUrl","variants","previewUrl","pdfUrl"]'
-valid_cloudstorage_base_urls: '["https://sunbirdstagingpublic.blob.core.windows.net"]'
+valid_cloudstorage_base_urls: '["https://sunbirddevbbpublic.blob.core.windows.net"]'
 
 ### QuestionSet RePublish Job Config
 inquiry_assessment_republish_kafka_topic_name: "{{ env_name }}.assessment.republish.request"
