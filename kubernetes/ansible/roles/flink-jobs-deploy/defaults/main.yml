@@ -73,6 +73,7 @@ question_keyspace_name: "{{instance}}_question_store"
 hierarchy_keyspace_name: "{{instance}}_hierarchy_store"
 
 # CNAME Config
+cloudstorage_relative_path_prefix: "CLOUD_STORAGE_BASE_PATH"
 cloudstorage_base_path: "https://sunbirddevbbpublic.blob.core.windows.net"
 cloudstorage_metadata_list: '["appIcon","posterImage","artifactUrl","downloadUrl","variants","previewUrl","pdfUrl"]'
 valid_cloudstorage_base_urls: '["https://sunbirddevbbpublic.blob.core.windows.net"]'
