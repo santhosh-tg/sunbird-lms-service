@@ -66,26 +66,42 @@ class QuestionRePublishFunction(config: QuestionSetRePublishConfig, httpUtil: Ht
     logger.info("Question publishing started for : " + data.identifier)
     metrics.incCounter(config.questionRePublishEventCount)
     val obj = getObject(data.identifier, data.pkgVersion, data.mimeType, data.publishType, readerConfig)(neo4JUtil, cassandraUtil,config)
-    val messages: List[String] = validate(obj, obj.identifier, validateQuestion)
-    if (messages.isEmpty) {
-      cache.del(obj.identifier)
-      val enrichedObj = enrichObject(obj)(neo4JUtil, cassandraUtil, readerConfig, cloudStorageUtil, config, definitionCache, definitionConfig)
-      val objWithArtifactUrl = updateArtifactUrl(enrichedObj, EcarPackageType.FULL.toString)(ec, neo4JUtil, cloudStorageUtil, definitionCache, definitionConfig, config, httpUtil)
-      val objWithEcar = getObjectWithEcar(objWithArtifactUrl, pkgTypes)(ec, neo4JUtil, cloudStorageUtil, config, definitionCache, definitionConfig, httpUtil)
-      logger.info("Ecar generation done for Question: " + objWithEcar.identifier)
-      saveOnSuccess(objWithEcar)(neo4JUtil, cassandraUtil, readerConfig, definitionCache, definitionConfig)
-      metrics.incCounter(config.questionRePublishSuccessEventCount)
-      logger.info("Question publishing completed successfully for : " + data.identifier)
-    } else {
-      val upPkgVersion = obj.pkgVersion + 1
-      val migrVer = 0.2
-      val nodeId = obj.dbId
-      val errorMessages = messages.mkString("; ")
-      val query = s"""MATCH (n:domain{IL_UNIQUE_ID:"$nodeId"}) SET n.status="Failed", n.pkgVersion=$upPkgVersion, n.publishError="$errorMessages", n.migrationVersion=$migrVer, $auditPropsUpdateQuery;"""
-      neo4JUtil.executeQuery(query, "write")
-      metrics.incCounter(config.questionRePublishFailedEventCount)
-      logger.info("Question publishing failed for : " + data.identifier)
+    try {
+      val messages: List[String] = validate(obj, obj.identifier, validateQuestion)
+      if (messages.isEmpty) {
+        cache.del(obj.identifier)
+        val enrichedObj = enrichObject(obj)(neo4JUtil, cassandraUtil, readerConfig, cloudStorageUtil, config, definitionCache, definitionConfig)
+        val objWithArtifactUrl = updateArtifactUrl(enrichedObj, EcarPackageType.FULL.toString)(ec, neo4JUtil, cloudStorageUtil, definitionCache, definitionConfig, config, httpUtil)
+        val objWithEcar = getObjectWithEcar(objWithArtifactUrl, pkgTypes)(ec, neo4JUtil, cloudStorageUtil, config, definitionCache, definitionConfig, httpUtil)
+        logger.info("Ecar generation done for Question: " + objWithEcar.identifier)
+        saveOnSuccess(objWithEcar)(neo4JUtil, cassandraUtil, readerConfig, definitionCache, definitionConfig)
+        metrics.incCounter(config.questionRePublishSuccessEventCount)
+        logger.info("Question publishing completed successfully for : " + data.identifier)
+      } else {
+        val upPkgVersion = obj.pkgVersion + 1
+        val migrVer = 0.2
+        val nodeId = obj.dbId
+        val errorMessages = messages.mkString("; ")
+        val query = s"""MATCH (n:domain{IL_UNIQUE_ID:"$nodeId"}) SET n.status="Failed", n.pkgVersion=$upPkgVersion, n.publishError="$errorMessages", n.migrationVersion=$migrVer, $auditPropsUpdateQuery;"""
+        neo4JUtil.executeQuery(query, "write")
+        metrics.incCounter(config.questionRePublishFailedEventCount)
+        logger.info("Question publishing failed for : " + data.identifier)
+      }
+    } catch {
+      case e: Exception => {
+        val upPkgVersion = obj.pkgVersion + 1
+        val migrVer = 0.2
+        val nodeId = obj.dbId
+        val errorMessages = e.getLocalizedMessage
+        val query = s"""MATCH (n:domain{IL_UNIQUE_ID:"$nodeId"}) SET n.status="Failed", n.pkgVersion=$upPkgVersion, n.publishError="$errorMessages", n.migrationVersion=$migrVer, $auditPropsUpdateQuery;"""
+        neo4JUtil.executeQuery(query, "write")
+        metrics.incCounter(config.questionRePublishFailedEventCount)
+        logger.info("Question re-publishing failed for : " + data.identifier + "| Error : "+e.getLocalizedMessage)
+        e.printStackTrace()
+
+      }
     }
+
   }
 
   private def auditPropsUpdateQuery(): String = {
