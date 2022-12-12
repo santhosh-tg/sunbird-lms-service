@@ -24,7 +24,7 @@ node(){
                 currentBuild.result = 'SUCCESS'
             }
             archiveArtifacts 'metadata.json'
-            currentBuild.description = "Image: ${values.image_tag}, Private: ${params.private_branch}, Public: ${params.branch_or_tag}"
+            currentBuild.description = "Image: ${values.image_tag}, Private: ${params.private_branch}, Public: ${params.inquiry_release_tag}"
         }
     }
 
