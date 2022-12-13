@@ -8,8 +8,9 @@ instance_name: "{{ env }}"
 instance: "{{ env }}"
 
 ### Global vars
-flink_namespace: "flink-kp-{{ bb_name }}"
+flink_namespace: "flink-kp-{{ instance }}"
 default_channel: "org.sunbird"
+
 
 
 ### base config
