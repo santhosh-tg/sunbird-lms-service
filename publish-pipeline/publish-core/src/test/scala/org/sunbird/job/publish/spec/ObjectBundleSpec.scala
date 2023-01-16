@@ -25,14 +25,14 @@ class ObjectBundleSpec extends FlatSpec with BeforeAndAfterAll with Matchers wit
   //	implicit val cloudStorageUtil: CloudStorageUtil = new CloudStorageUtil(publishConfig)
   implicit val mockNeo4JUtil: Neo4JUtil = mock[Neo4JUtil](Mockito.withSettings().serializable())
   implicit val ec: ExecutionContextExecutor = ExecutionContexts.global
-  val definitionBasePath: String = if (config.hasPath("schema.basePath")) config.getString("schema.basePath") else "https://sunbirddev.blob.core.windows.net/sunbird-content-dev/schemas/local"
+  val definitionBasePath: String = if (config.hasPath("schema.basePath")) config.getString("schema.basePath") else "https://sunbirddevbbpublic.blob.core.windows.net/sunbird-content-staging-inquiry/schemas/local"
   val schemaSupportVersionMap = if (config.hasPath("schema.supportedVersion")) config.getObject("schema.supportedVersion").unwrapped().asScala.toMap else Map[String, AnyRef]()
   implicit val defCache = new DefinitionCache()
   implicit val defConfig = DefinitionConfig(schemaSupportVersionMap, definitionBasePath)
 
   "validUrl" should "return true for valid url input" in {
     val obj = new TestObjectBundle
-    val result = obj.validUrl("https://sunbirddev.blob.core.windows.net/sunbird-content-dev/ecar_files/do_113105564164997120111/1-vsa-qts-2_1603203738131_do_113105564164997120111_1.0_spine.ecar")
+    val result = obj.validUrl("https://sunbirddevbbpublic.blob.core.windows.net//questionset/do_2137002409025290241504/artifact/download-1.thumb.jpg")
     result should be(true)
   }
 
