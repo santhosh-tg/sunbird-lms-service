@@ -1,5 +1,6 @@
 package org.sunbird.job.publish.spec
 
+import com.typesafe.config.{Config, ConfigFactory}
 import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -23,7 +24,8 @@ class ObjectReaderTestSpec extends FlatSpec with BeforeAndAfterAll with Matchers
 
   implicit val mockNeo4JUtil: Neo4JUtil = mock[Neo4JUtil](Mockito.withSettings().serializable())
   implicit val mockCassandraUtil: CassandraUtil = mock[CassandraUtil](Mockito.withSettings().serializable())
-  implicit val publishConfig = new PublishConfig(null, "test")
+  val config: Config = ConfigFactory.load("test.conf").withFallback(ConfigFactory.systemEnvironment())
+  implicit val publishConfig: PublishConfig = new PublishConfig(config, "test")
 
   "Object Reader " should " read the metadata " in {
     when(mockNeo4JUtil.getNodeProperties("do_123.img")).thenReturn(Map[String, AnyRef]("name" -> "Content Name", "identifier" -> "do_123.img", "IL_UNIQUE_ID" -> "do_123.img", "pkgVersion" -> 2.0.asInstanceOf[AnyRef]).asJava)

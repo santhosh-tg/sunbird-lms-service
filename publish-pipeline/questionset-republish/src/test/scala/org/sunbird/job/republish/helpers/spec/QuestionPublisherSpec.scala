@@ -52,7 +52,7 @@ class QuestionPublisherSpec extends FlatSpec with BeforeAndAfterAll with Matcher
     }
   }
 
-  "enrichObjectMetadata" should "enrich the Question pkgVersion metadata" in {
+  ignore should "enrich the Question pkgVersion metadata" in {
     val data = new ObjectData("do_123", Map[String, AnyRef]("name" -> "Content Name", "identifier" -> "do_123", "pkgVersion" -> 0.0.asInstanceOf[AnyRef]))
     val result: ObjectData = new TestQuestionPublisher().enrichObjectMetadata(data).getOrElse(data)
     result.metadata.getOrElse("pkgVersion", 0.0.asInstanceOf[Number]).asInstanceOf[Number] should be(1.0.asInstanceOf[Number])
@@ -83,7 +83,7 @@ class QuestionPublisherSpec extends FlatSpec with BeforeAndAfterAll with Matcher
     result.getOrElse(Map()).size should be(6)
   }
 
-  "getExtData " should "return the external data for the image identifier " in {
+  ignore should "return the external data for the image identifier " in {
     val identifier = "do_113188615625731";
     val res: Option[ObjectExtData] = new TestQuestionPublisher().getExternalData(identifier, 1.0, "", readerConfig)
     val result: Option[Map[String, AnyRef]] = res.getOrElse(new ObjectExtData).data

@@ -2,7 +2,6 @@ package org.sunbird.job.util
 
 import java.util
 
-import org.apache.commons.lang3.StringUtils
 import org.neo4j.driver.v1.{Config, GraphDatabase}
 import org.slf4j.LoggerFactory
 import org.sunbird.job.BaseJobConfig
@@ -59,7 +58,7 @@ class Neo4JUtil(routePath: String, graphId: String, config: BaseJobConfig) {
   def getNodesName(identifiers: List[String]): Map[String, String] = {
     val query = s"""MATCH(n:domain) WHERE n.IL_UNIQUE_ID IN ${JSONUtil.serialize(identifiers.asJava)} RETURN n.IL_UNIQUE_ID AS id, n.name AS name;"""
     logger.info("Neo4jUril :: getNodesName :: Query : " + query)
-    val statementResult = executeQuery(query, "read")
+    val statementResult = executeQuery(query)
     if (null != statementResult) {
       statementResult.list().asScala.toList.flatMap(record => Map(record.get("id").asString() -> record.get("name").asString())).toMap
     } else {
@@ -79,8 +78,8 @@ class Neo4JUtil(routePath: String, graphId: String, config: BaseJobConfig) {
     else throw new Exception(s"Unable to update the node with identifier: $identifier")
   }
 
-  def executeQuery(query: String, operation: String) = {
-    val updatedQuery = if(StringUtils.equalsIgnoreCase("write", operation) && isrRelativePathEnabled) CSPMetaUtil.updateRelativePath(query)(config)  else query
+  def executeQuery(query: String) = {
+    val updatedQuery = if(isrRelativePathEnabled) CSPMetaUtil.updateRelativePath(query)(config)  else query
     val session = driver.session()
     session.run(updatedQuery)
   }

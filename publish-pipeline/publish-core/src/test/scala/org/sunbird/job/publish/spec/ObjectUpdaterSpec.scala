@@ -18,7 +18,7 @@ class ObjectUpdaterSpec extends FlatSpec with BeforeAndAfterAll with Matchers wi
   implicit val mockCassandraUtil: CassandraUtil = mock[CassandraUtil](Mockito.withSettings().serializable())
   implicit val readerConfig = ExtDataConfig("test", "test")
   implicit lazy val defCache: DefinitionCache = new DefinitionCache()
-  implicit val definitionConfig: DefinitionConfig = DefinitionConfig(Map("itemset" -> "2.0"), "https://sunbirddev.blob.core.windows.net/sunbird-content-dev/schemas/local")
+  implicit val definitionConfig: DefinitionConfig = DefinitionConfig(Map("itemset" -> "2.0"), "https://sunbirddevbbpublic.blob.core.windows.net/sunbird-content-staging-inquiry/schemas/local")
 
 
   override protected def beforeAll(): Unit = {
@@ -31,7 +31,7 @@ class ObjectUpdaterSpec extends FlatSpec with BeforeAndAfterAll with Matchers wi
 
   "ObjectUpdater saveOnSuccess" should " update the status for successfully published data " in {
 
-    when(mockNeo4JUtil.executeQuery(anyString(), anyString())).thenReturn(any());
+    when(mockNeo4JUtil.executeQuery(anyString())).thenReturn(any());
 
     val hierarchy = Map("identifier" -> "do_123", "children" -> List(Map("identifier" -> "do_234", "name" -> "Children-1"), Map("identifier" -> "do_345", "name" -> "Children-2")))
     val metadata = Map("objectType" -> "QuestionSet", "identifier" -> "do_123","publish_type" -> "Public", "IL_UNIQUE_ID" -> "do_123", "IL_FUNC_OBJECT_TYPE" -> "QuestionSet", "name" -> "Test QuestionSet", "status" -> "Live")
@@ -43,7 +43,7 @@ class ObjectUpdaterSpec extends FlatSpec with BeforeAndAfterAll with Matchers wi
 
   "ObjectUpdater updateProcessingNode" should " update the status for successfully published data " in {
 
-    when(mockNeo4JUtil.executeQuery(anyString(), anyString())).thenReturn(any());
+    when(mockNeo4JUtil.executeQuery(anyString())).thenReturn(any());
 
     val hierarchy = Map("identifier" -> "do_123", "children" -> List(Map("identifier" -> "do_234", "name" -> "Children-1"), Map("identifier" -> "do_345", "name" -> "Children-2")))
     val metadata = Map("objectType" -> "QuestionSet", "identifier" -> "do_123","publish_type" -> "Public", "IL_UNIQUE_ID" -> "do_123", "IL_FUNC_OBJECT_TYPE" -> "QuestionSet", "name" -> "Sr.18\\sst\\Grade6%_/@#!-+=()\",?&6.10_ମାଂସପେଶୀ, ରକ୍ତ Test QuestionSet", "status" -> "Live")
@@ -55,7 +55,7 @@ class ObjectUpdaterSpec extends FlatSpec with BeforeAndAfterAll with Matchers wi
 
   "ObjectUpdater saveOnFailure" should " update the status for failed published data " in {
 
-    when(mockNeo4JUtil.executeQuery(anyString(), anyString())).thenReturn(any())
+    when(mockNeo4JUtil.executeQuery(anyString())).thenReturn(any())
 
     val hierarchy = Map("identifier" -> "do_123", "children" -> List(Map("identifier" -> "do_234", "name" -> "Children-1"), Map("identifier" -> "do_345", "name" -> "Children-2")))
     val metadata = Map("objectType" -> "QuestionSet","identifier" -> "do_123","publish_type" -> "Public", "IL_UNIQUE_ID" -> "do_123", "IL_FUNC_OBJECT_TYPE" -> "QuestionSet", "name" -> "Test QuestionSet", "status" -> "Live")

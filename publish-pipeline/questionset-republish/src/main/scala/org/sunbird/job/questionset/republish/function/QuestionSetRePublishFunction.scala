@@ -103,7 +103,7 @@ class QuestionSetRePublishFunction(config: QuestionSetRePublishConfig, httpUtil:
 				val nodeId = obj.dbId
 				val errorMessages = messages.mkString("; ")
 				val query = s"""MATCH (n:domain{IL_UNIQUE_ID:"$nodeId"}) SET n.status="Failed", n.pkgVersion=$upPkgVersion, n.publishError="$errorMessages", n.migrationVersion=$migrVer, $auditPropsUpdateQuery;"""
-				neo4JUtil.executeQuery(query, "write")
+				neo4JUtil.executeQuery(query)
 				metrics.incCounter(config.questionSetRePublishFailedEventCount)
 				logger.info("QuestionSet Re-publishing failed for : " + data.identifier)
 			}
@@ -113,7 +113,7 @@ class QuestionSetRePublishFunction(config: QuestionSetRePublishConfig, httpUtil:
 				val migrVer = 0.2
 				val nodeId = obj.dbId
 				val query = s"""MATCH (n:domain{IL_UNIQUE_ID:"$nodeId"}) SET n.status="Failed", n.pkgVersion=$upPkgVersion, n.publishError="${e.getMessage}", n.migrationVersion=$migrVer, $auditPropsUpdateQuery;"""
-				neo4JUtil.executeQuery(query, "write")
+				neo4JUtil.executeQuery(query)
 			}
 		}
 	}
